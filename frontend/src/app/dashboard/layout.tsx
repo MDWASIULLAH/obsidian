@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -51,6 +52,27 @@ export default function DashboardLayout({
     },
   });
 
+  const [isOnboarding, setIsOnboarding] = useState(false);
+
+  useEffect(() => {
+    // Only run onboarding once when session is first established
+    if (session?.user && !localStorage.getItem("obsidian_onboarded")) {
+      setIsOnboarding(true);
+      // Simulate/call backend provisioning
+      fetch("http://localhost:8000/api/v1/onboarding/provision-security-center", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: (session as any)?.userId || "demo-user-id" })
+      }).finally(() => {
+        // Artificial delay for UX
+        setTimeout(() => {
+          localStorage.setItem("obsidian_onboarded", "true");
+          setIsOnboarding(false);
+        }, 2500);
+      });
+    }
+  }, [session]);
+
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-surface-950 flex items-center justify-center">
@@ -59,24 +81,42 @@ export default function DashboardLayout({
     );
   }
 
+  if (isOnboarding) {
+    return (
+      <div className="min-h-screen bg-surface-950 flex flex-col items-center justify-center">
+        <div className="glass-card p-10 flex flex-col items-center max-w-md w-full text-center">
+          <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-primary-500/10 mb-6">
+            <Shield className="w-8 h-8 text-primary-500 animate-pulse" />
+            <div className="absolute inset-0 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-100 mb-2">Provisioning Security Center</h2>
+          <p className="text-sm text-gray-400 mb-6">
+            Establishing GitOps connection and creating your central OBSIDIAN repository...
+          </p>
+          <div className="w-full bg-surface-800 rounded-full h-1.5 overflow-hidden">
+            <div className="bg-primary-500 h-1.5 rounded-full animate-pulse w-1/3" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* ── Sidebar ────────────────────────────────────── */}
-      <aside className="w-64 flex-shrink-0 border-r border-white/5 bg-surface-950/80 backdrop-blur-xl flex flex-col">
+      <aside className="w-64 flex-shrink-0 border-r border-surface-800 bg-surface-900 flex flex-col">
         {/* Logo */}
-        <div className="p-6 border-b border-white/5">
+        <div className="p-6 border-b border-surface-800">
           <Link href="/dashboard" className="flex items-center gap-3 group">
-            <div className="relative">
-              <Shield className="w-8 h-8 text-cyber-cyan" />
-              <div className="absolute inset-0 w-8 h-8 bg-cyber-cyan/20 rounded-full blur-lg group-hover:bg-cyber-cyan/30 transition-all" />
+            <div className="relative flex items-center justify-center w-8 h-8 rounded bg-primary-500/10">
+              <Shield className="w-5 h-5 text-primary-500" />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight">
-                <span className="text-glow-cyan">SENTINEL</span>{" "}
-                <span className="text-gray-400 font-light">AI X</span>
+              <h1 className="text-lg font-bold tracking-tight text-gray-100">
+                OBSIDIAN
               </h1>
-              <p className="text-[10px] text-gray-500 tracking-widest uppercase">
-                Security Engineering
+              <p className="text-[10px] text-gray-400 tracking-widest uppercase">
+                Security Center
               </p>
             </div>
           </Link>
@@ -94,14 +134,14 @@ export default function DashboardLayout({
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
                   isActive
-                    ? "bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/20"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                    ? "bg-surface-800 text-gray-100 font-medium border border-surface-700"
+                    : "text-gray-400 hover:text-gray-200 hover:bg-surface-800/50"
                 )}
               >
                 <Icon className="w-4 h-4" />
                 <span>{item.label}</span>
                 {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyber-cyan shadow-[0_0_6px_rgba(0,240,255,0.5)]" />
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500" />
                 )}
               </Link>
             );
@@ -109,10 +149,10 @@ export default function DashboardLayout({
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-surface-800">
           <div className="glass-card p-3">
             <div className="flex items-center gap-2 mb-2">
-              <Zap className="w-4 h-4 text-cyber-green" />
+              <Zap className="w-4 h-4 text-teal-500" />
               <span className="text-xs font-medium text-gray-300">
                 Pipeline Status
               </span>
@@ -125,19 +165,19 @@ export default function DashboardLayout({
           
           {/* User Profile */}
           {session?.user && (
-            <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
+            <div className="mt-4 pt-4 border-t border-surface-800 flex items-center gap-3">
               <img 
                 src={session.user.image || `https://avatar.vercel.sh/${session.user.name}`} 
                 alt="Avatar" 
-                className="w-10 h-10 rounded-full border border-surface-700" 
+                className="w-10 h-10 rounded-full border border-surface-700 bg-surface-800" 
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{session.user.name}</p>
+                <p className="text-sm font-medium text-gray-100 truncate">{session.user.name}</p>
                 <p className="text-xs text-gray-400 truncate">{session.user.email}</p>
               </div>
               <button 
                 onClick={() => signOut({ callbackUrl: '/' })}
-                className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-surface-800 transition-colors"
+                className="p-1.5 text-gray-400 hover:text-gray-100 rounded-lg hover:bg-surface-800 transition-colors"
                 title="Sign out"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>

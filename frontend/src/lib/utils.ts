@@ -24,13 +24,13 @@ export function formatDuration(seconds: number | null): string {
 
 export function severityColor(severity: string): string {
   const colors: Record<string, string> = {
-    critical: "text-cyber-red",
-    high: "text-cyber-orange",
-    medium: "text-cyber-yellow",
-    low: "text-blue-400",
-    info: "text-gray-400",
+    critical: "text-red-500",
+    high: "text-orange-500",
+    medium: "text-amber-500",
+    low: "text-blue-500",
+    info: "text-slate-400",
   };
-  return colors[severity] || "text-gray-400";
+  return colors[severity] || "text-slate-400";
 }
 
 export function severityBadge(severity: string): string {
@@ -39,25 +39,25 @@ export function severityBadge(severity: string): string {
 
 export function statusColor(status: string): string {
   const colors: Record<string, string> = {
-    completed: "text-cyber-green",
-    scanning: "text-cyber-cyan",
-    queued: "text-gray-400",
-    failed: "text-cyber-red",
-    cancelled: "text-gray-500",
+    completed: "text-teal-500",
+    scanning: "text-blue-500",
+    queued: "text-slate-400",
+    failed: "text-red-500",
+    cancelled: "text-slate-500",
   };
-  return colors[status] || "text-gray-400";
+  return colors[status] || "text-slate-400";
 }
 
 export function scoreColor(score: number): string {
-  if (score >= 80) return "text-cyber-green";
-  if (score >= 60) return "text-cyber-yellow";
-  if (score >= 40) return "text-cyber-orange";
-  return "text-cyber-red";
+  if (score >= 80) return "text-teal-500";
+  if (score >= 60) return "text-amber-500";
+  if (score >= 40) return "text-orange-500";
+  return "text-red-500";
 }
 
 export function scoreGradient(score: number): string {
-  if (score >= 80) return "from-emerald-500 to-cyan-500";
-  if (score >= 60) return "from-yellow-500 to-orange-500";
+  if (score >= 80) return "from-teal-500 to-emerald-500";
+  if (score >= 60) return "from-amber-500 to-orange-500";
   if (score >= 40) return "from-orange-500 to-red-500";
   return "from-red-500 to-rose-600";
 }

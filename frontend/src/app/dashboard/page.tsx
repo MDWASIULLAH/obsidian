@@ -63,7 +63,7 @@ function StatCard({
           </p>
           <p className="text-2xl font-bold text-gray-100">{value}</p>
           {trend && (
-            <p className="text-xs text-cyber-green mt-1 flex items-center gap-1">
+            <p className="text-xs text-teal-500 mt-1 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
               {trend}
             </p>
@@ -122,11 +122,11 @@ function SecurityScoreGauge({ score }: { score: number }) {
             <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop
                 offset="0%"
-                stopColor={score >= 60 ? "#00f0ff" : "#ff3366"}
+                stopColor={score >= 60 ? "#14b8a6" : "#ef4444"}
               />
               <stop
                 offset="100%"
-                stopColor={score >= 60 ? "#00ff88" : "#ff6600"}
+                stopColor={score >= 60 ? "#10b981" : "#f97316"}
               />
             </linearGradient>
           </defs>
@@ -160,9 +160,9 @@ function SeverityChart({
 }) {
   const total = Object.values(distribution).reduce((a, b) => a + b, 0) || 1;
   const items = [
-    { key: "critical", label: "Critical", color: "#ff3366" },
-    { key: "high", label: "High", color: "#ff6600" },
-    { key: "medium", label: "Medium", color: "#fbbf24" },
+    { key: "critical", label: "Critical", color: "#ef4444" },
+    { key: "high", label: "High", color: "#f97316" },
+    { key: "medium", label: "Medium", color: "#f59e0b" },
     { key: "low", label: "Low", color: "#3b82f6" },
     { key: "info", label: "Info", color: "#94a3b8" },
   ];

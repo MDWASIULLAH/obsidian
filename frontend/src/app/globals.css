@@ -2,117 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
 
 /* ═══════════════════════════════════════════════════════════════
-   SENTINEL AI X — Global Styles
-   Cybersecurity dark theme with glassmorphism
+   OBSIDIAN — Enterprise Global Styles
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  --cyber-cyan: #00f0ff;
-  --cyber-green: #00ff88;
-  --cyber-red: #ff3366;
-  --cyber-purple: #8b5cf6;
-  --surface-900: #0a0e1a;
-  --surface-800: #0f172a;
-  --surface-700: #1e293b;
-  --glass-bg: rgba(15, 23, 42, 0.6);
-  --glass-border: rgba(0, 240, 255, 0.1);
+  --primary: #14b8a6;
+  --surface-900: #18181b;
+  --surface-800: #27272a;
+  --surface-700: #3f3f46;
 }
 
 /* ── Base ────────────────────────────────────────────────── */
 
 body {
   @apply bg-surface-950 text-gray-100 font-sans antialiased;
-  background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
-    linear-gradient(rgba(0, 240, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
-  background-size: 100%, 100%, 40px 40px, 40px 40px;
+  background-image: radial-gradient(circle at top right, rgba(20, 184, 166, 0.05), transparent 40%),
+                    radial-gradient(circle at bottom left, rgba(20, 184, 166, 0.03), transparent 40%);
 }
 
 /* ── Scrollbar ──────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 240, 255, 0.2);
-  border-radius: 3px;
+  background: #3f3f46;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 240, 255, 0.4);
+  background: #52525b;
 }
 
-/* ── Glass Card ─────────────────────────────────────────── */
+/* ── Enterprise Cards ─────────────────────────────────────────── */
 
 @layer components {
   .glass-card {
-    @apply rounded-xl border border-white/5 backdrop-blur-xl;
-    background: var(--glass-bg);
-    box-shadow:
-      0 0 0 1px rgba(0, 240, 255, 0.05),
-      0 4px 24px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    @apply rounded-xl border border-surface-800 bg-surface-900/50 backdrop-blur-md shadow-sm;
   }
 
   .glass-card-hover {
-    @apply glass-card transition-all duration-300;
-  }
-
-  .glass-card-hover:hover {
-    border-color: rgba(0, 240, 255, 0.15);
-    box-shadow:
-      0 0 0 1px rgba(0, 240, 255, 0.1),
-      0 8px 32px rgba(0, 0, 0, 0.4),
-      0 0 20px rgba(0, 240, 255, 0.05),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    @apply glass-card transition-all duration-200 hover:border-surface-700 hover:bg-surface-800/50 hover:shadow-md;
   }
 
   /* ── Severity Badges ────────────────────────────────── */
 
   .badge-critical {
-    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
-    background: rgba(255, 51, 102, 0.15);
-    color: #ff3366;
-    border: 1px solid rgba(255, 51, 102, 0.3);
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-500 border border-red-500/20;
   }
 
   .badge-high {
-    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
-    background: rgba(255, 102, 0, 0.15);
-    color: #ff6600;
-    border: 1px solid rgba(255, 102, 0, 0.3);
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20;
   }
 
   .badge-medium {
-    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
-    background: rgba(251, 191, 36, 0.15);
-    color: #fbbf24;
-    border: 1px solid rgba(251, 191, 36, 0.3);
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20;
   }
 
   .badge-low {
-    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
-    background: rgba(0, 102, 255, 0.15);
-    color: #3b82f6;
-    border: 1px solid rgba(0, 102, 255, 0.3);
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20;
   }
 
   .badge-info {
-    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
-    background: rgba(148, 163, 184, 0.15);
-    color: #94a3b8;
-    border: 1px solid rgba(148, 163, 184, 0.3);
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20;
   }
 
   /* ── Status Indicators ──────────────────────────────── */
@@ -122,68 +83,48 @@ body {
   }
 
   .status-dot-active {
-    @apply status-dot bg-cyber-green animate-pulse;
-    box-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+    @apply status-dot bg-teal-500;
   }
 
   .status-dot-scanning {
-    @apply status-dot bg-cyber-cyan animate-pulse;
-    box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+    @apply status-dot bg-blue-500 animate-pulse;
   }
 
   .status-dot-failed {
-    @apply status-dot bg-cyber-red;
-    box-shadow: 0 0 8px rgba(255, 51, 102, 0.5);
+    @apply status-dot bg-red-500;
   }
 
-  /* ── Cyber Glow Text ────────────────────────────────── */
+  /* ── Legacy Mappings (Avoid breaking old components) ────────────────────────────────── */
 
   .text-glow-cyan {
-    color: var(--cyber-cyan);
-    text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    @apply text-primary-500 font-semibold;
   }
 
   .text-glow-green {
-    color: var(--cyber-green);
-    text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    @apply text-primary-400 font-semibold;
   }
 
-  /* ── Progress Bar ───────────────────────────────────── */
-
   .progress-bar {
-    @apply h-1.5 rounded-full overflow-hidden;
-    background: rgba(30, 41, 59, 0.8);
+    @apply h-1.5 rounded-full overflow-hidden bg-surface-800;
   }
 
   .progress-bar-fill {
-    @apply h-full rounded-full transition-all duration-500;
-    background: linear-gradient(90deg, var(--cyber-cyan), var(--cyber-green));
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    @apply h-full rounded-full transition-all duration-500 bg-primary-500;
   }
-
-  /* ── Scan Line Animation ────────────────────────────── */
 
   .scan-line-overlay {
-    @apply absolute inset-0 pointer-events-none overflow-hidden;
-  }
-
-  .scan-line-overlay::after {
-    content: "";
-    @apply absolute left-0 right-0 h-px;
-    background: linear-gradient(90deg, transparent, var(--cyber-cyan), transparent);
-    animation: scanLine 4s linear infinite;
-    opacity: 0.3;
+    display: none;
   }
 }
 
 /* ── React Flow Override ────────────────────────────────── */
 
 .react-flow__background {
-  background-color: var(--surface-900) !important;
+  background-color: transparent !important;
 }
 
 .react-flow__edge-path {
-  stroke: rgba(0, 240, 255, 0.3) !important;
+  stroke: #3f3f46 !important;
 }
 
 .react-flow__node {
