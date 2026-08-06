@@ -55,23 +55,11 @@ export default function DashboardLayout({
   const [isOnboarding, setIsOnboarding] = useState(false);
 
   useEffect(() => {
-    // Only run onboarding once when session is first established
-    if (session?.user && !localStorage.getItem("obsidian_onboarded")) {
-      setIsOnboarding(true);
-      // Simulate/call backend provisioning
-      fetch("http://localhost:8000/api/v1/onboarding/provision-security-center", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: (session as any)?.userId || "demo-user-id" })
-      }).finally(() => {
-        // Artificial delay for UX
-        setTimeout(() => {
-          localStorage.setItem("obsidian_onboarded", "true");
-          setIsOnboarding(false);
-        }, 2500);
-      });
+    // Check if onboarded, if not redirect to setup page
+    if (session?.user && !localStorage.getItem("obsidian_onboarded") && pathname !== "/dashboard/setup") {
+      router.push("/dashboard/setup");
     }
-  }, [session]);
+  }, [session, pathname, router]);
 
   if (status === "loading") {
     return (
@@ -81,24 +69,9 @@ export default function DashboardLayout({
     );
   }
 
-  if (isOnboarding) {
-    return (
-      <div className="min-h-screen bg-surface-950 flex flex-col items-center justify-center">
-        <div className="glass-card p-10 flex flex-col items-center max-w-md w-full text-center">
-          <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-primary-500/10 mb-6">
-            <Shield className="w-8 h-8 text-primary-500 animate-pulse" />
-            <div className="absolute inset-0 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-100 mb-2">Provisioning Security Center</h2>
-          <p className="text-sm text-gray-400 mb-6">
-            Establishing GitOps connection and creating your central OBSIDIAN repository...
-          </p>
-          <div className="w-full bg-surface-800 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-primary-500 h-1.5 rounded-full animate-pulse w-1/3" />
-          </div>
-        </div>
-      </div>
-    );
+  // If on setup page, just render children without sidebar
+  if (pathname === "/dashboard/setup") {
+    return <div className="h-screen bg-surface-950 overflow-auto">{children}</div>;
   }
 
   return (

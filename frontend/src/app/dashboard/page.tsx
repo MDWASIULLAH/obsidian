@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Activity,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { api, type DashboardData, type Scan } from "@/lib/api";
 import {
   formatDate,
@@ -280,11 +281,51 @@ function RecentScans({ scans }: { scans: Scan[] }) {
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [liveFindings, setLiveFindings] = useState<any[]>([]);
+
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    // Setup WebSocket for Live Agent Telemetry
+    const ws = new WebSocket("ws://localhost:8000/api/v1/ws/dashboard");
+    
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === "live_finding") {
+          setLiveFindings((prev) => [message.data, ...prev].slice(0, 5)); // Keep last 5
+        }
+      } catch (err) {
+        console.error("WS Message Error:", err);
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   useEffect(() => {
     async function load() {
       try {
         const dashboard = await api.getDashboard();
+        
+        // Fetch real GitHub stats if session is available
+        if (session?.user) {
+          try {
+            const userId = (session as any).userId;
+            if (userId) {
+              const res = await fetch(`http://localhost:8000/api/v1/auth/github-stats?user_id=${userId}`);
+              if (res.ok) {
+                const stats = await res.json();
+                dashboard.total_repositories = stats.repo_count;
+              }
+            }
+          } catch (e) {
+            console.error("Failed to fetch real GitHub stats:", e);
+          }
+        }
+        
         setData(dashboard);
       } catch (err) {
         console.error("Dashboard load error:", err);
@@ -293,7 +334,7 @@ export default function DashboardPage() {
       }
     }
     load();
-  }, []);
+  }, [session]);
 
   if (loading) {
     return (
@@ -389,6 +430,50 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+      </motion.div>
+
+      {/* ── Live Agent Telemetry ──────────────────────────── */}
+      <motion.div variants={itemVariants} className="glass-card p-6 border-primary-500/20">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs text-gray-500 uppercase tracking-wider flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+            Live Agent Telemetry
+          </h3>
+          <span className="text-[10px] text-gray-400 font-mono">Listening on WSS...</span>
+        </div>
+        
+        {liveFindings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+            <Activity className="w-6 h-6 mb-2 opacity-50" />
+            <p className="text-sm">Waiting for agent telemetry streams...</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {liveFindings.map((finding, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-start gap-4 p-3 rounded-lg bg-surface-900 border border-surface-800"
+              >
+                <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
+                  finding.severity === 'critical' ? 'bg-red-500' :
+                  finding.severity === 'high' ? 'bg-orange-500' :
+                  finding.severity === 'medium' ? 'bg-amber-500' : 'bg-blue-500'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-100 font-medium truncate">{finding.title}</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs font-mono text-gray-400">{finding.repo}</span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(finding.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

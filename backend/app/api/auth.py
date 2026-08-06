@@ -60,3 +60,31 @@ async def get_me(user_id: str, db: AsyncSession = Depends(get_db)):
         "email": user.email,
         "avatar_url": user.avatar_url
     }
+
+import httpx
+
+@router.get("/github-stats")
+async def get_github_stats(user_id: str, db: AsyncSession = Depends(get_db)):
+    """Fetch real repository stats from GitHub using the user's OAuth token."""
+    stmt = select(User).where(User.id == user_id)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    
+    if not user or not user.github_token:
+        raise HTTPException(status_code=404, detail="User or GitHub token not found")
+
+    async with httpx.AsyncClient() as client:
+        # Fetch repos
+        res = await client.get(
+            "https://api.github.com/user/repos?per_page=100&affiliation=owner",
+            headers={"Authorization": f"Bearer {user.github_token}", "Accept": "application/vnd.github.v3+json"}
+        )
+        if res.status_code != 200:
+            return {"repo_count": 0, "error": "Failed to fetch from GitHub"}
+        
+        repos = res.json()
+        return {
+            "repo_count": len(repos),
+            "username": user.username,
+            "avatar_url": user.avatar_url
+        }

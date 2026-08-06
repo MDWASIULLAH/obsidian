@@ -120,8 +120,10 @@ def create_app() -> FastAPI:
     from app.api.router import api_router
     from app.api.auth import router as auth_router
     from app.api.onboarding import router as onboarding_router
+    from app.api.webhooks import router as webhooks_router
     application.include_router(auth_router, prefix="/api/v1")
     application.include_router(onboarding_router, prefix="/api/v1")
+    application.include_router(webhooks_router, prefix="/api/v1")
     application.include_router(api_router, prefix="/api/v1")
 
     # ── Health Check ───────────────────────────────────────────
