@@ -32,6 +32,10 @@ class Repository(Base):
 
     # Installation
     installation_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    
+    # Tenancy (Owner)
+    from sqlalchemy import ForeignKey
+    user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True, index=True)
 
     # Relationships
     scans: Mapped[list["Scan"]] = relationship(back_populates="repository", lazy="selectin")  # noqa: F821

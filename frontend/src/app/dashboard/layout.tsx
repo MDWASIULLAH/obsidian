@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   Shield,
@@ -42,6 +43,21 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push("/");
+    },
+  });
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-surface-950 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-primary-500 animate-ping" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -106,6 +122,28 @@ export default function DashboardLayout({
               <span className="text-xs text-gray-400">All systems operational</span>
             </div>
           </div>
+          
+          {/* User Profile */}
+          {session?.user && (
+            <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
+              <img 
+                src={session.user.image || `https://avatar.vercel.sh/${session.user.name}`} 
+                alt="Avatar" 
+                className="w-10 h-10 rounded-full border border-surface-700" 
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{session.user.name}</p>
+                <p className="text-xs text-gray-400 truncate">{session.user.email}</p>
+              </div>
+              <button 
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-surface-800 transition-colors"
+                title="Sign out"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 

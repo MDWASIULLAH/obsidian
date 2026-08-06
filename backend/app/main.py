@@ -118,6 +118,8 @@ def create_app() -> FastAPI:
 
     # ── Routers ────────────────────────────────────────────────
     from app.api.router import api_router
+    from app.api.auth import router as auth_router
+    application.include_router(auth_router, prefix="/api/v1")
     application.include_router(api_router, prefix="/api/v1")
 
     # ── Health Check ───────────────────────────────────────────

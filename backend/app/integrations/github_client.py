@@ -67,9 +67,9 @@ class GitHubEventData:
 class GitHubClient:
     """GitHub API client for SENTINEL AI X."""
 
-    def __init__(self) -> None:
+    def __init__(self, user_token: str | None = None) -> None:
         settings = get_settings()
-        self._token = settings.github_token
+        self._token = user_token or settings.github_token
         self._api_url = settings.github_api_url
         self._graphql_url = settings.github_graphql_url
         self._webhook_secret = settings.github_webhook_secret
