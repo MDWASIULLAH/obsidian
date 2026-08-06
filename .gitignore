@@ -1,0 +1,54 @@
+# ─────────────────────── Environment ────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+
+# ─────────────────────── Python ─────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ─────────────────────── Node.js ────────────────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# ─────────────────────── Docker ─────────────────────────────────────
+docker-compose.override.yml
+
+# ─────────────────────── IDE ────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─────────────────────── Repos Cache ────────────────────────────────
+/tmp/repos/
+repos_cache/
+
+# ─────────────────────── Logs ───────────────────────────────────────
+*.log
+logs/
+
+# ─────────────────────── Alembic ────────────────────────────────────
+alembic/versions/*.pyc

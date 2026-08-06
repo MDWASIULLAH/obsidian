@@ -1,0 +1,191 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+/* ═══════════════════════════════════════════════════════════════
+   SENTINEL AI X — Global Styles
+   Cybersecurity dark theme with glassmorphism
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --cyber-cyan: #00f0ff;
+  --cyber-green: #00ff88;
+  --cyber-red: #ff3366;
+  --cyber-purple: #8b5cf6;
+  --surface-900: #0a0e1a;
+  --surface-800: #0f172a;
+  --surface-700: #1e293b;
+  --glass-bg: rgba(15, 23, 42, 0.6);
+  --glass-border: rgba(0, 240, 255, 0.1);
+}
+
+/* ── Base ────────────────────────────────────────────────── */
+
+body {
+  @apply bg-surface-950 text-gray-100 font-sans antialiased;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+    linear-gradient(rgba(0, 240, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
+  background-size: 100%, 100%, 40px 40px, 40px 40px;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.4);
+}
+
+/* ── Glass Card ─────────────────────────────────────────── */
+
+@layer components {
+  .glass-card {
+    @apply rounded-xl border border-white/5 backdrop-blur-xl;
+    background: var(--glass-bg);
+    box-shadow:
+      0 0 0 1px rgba(0, 240, 255, 0.05),
+      0 4px 24px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+
+  .glass-card-hover:hover {
+    border-color: rgba(0, 240, 255, 0.15);
+    box-shadow:
+      0 0 0 1px rgba(0, 240, 255, 0.1),
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 20px rgba(0, 240, 255, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  /* ── Severity Badges ────────────────────────────────── */
+
+  .badge-critical {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(255, 51, 102, 0.15);
+    color: #ff3366;
+    border: 1px solid rgba(255, 51, 102, 0.3);
+  }
+
+  .badge-high {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(255, 102, 0, 0.15);
+    color: #ff6600;
+    border: 1px solid rgba(255, 102, 0, 0.3);
+  }
+
+  .badge-medium {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+  }
+
+  .badge-low {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(0, 102, 255, 0.15);
+    color: #3b82f6;
+    border: 1px solid rgba(0, 102, 255, 0.3);
+  }
+
+  .badge-info {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+  }
+
+  /* ── Status Indicators ──────────────────────────────── */
+
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-dot-active {
+    @apply status-dot bg-cyber-green animate-pulse;
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+  }
+
+  .status-dot-scanning {
+    @apply status-dot bg-cyber-cyan animate-pulse;
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+  }
+
+  .status-dot-failed {
+    @apply status-dot bg-cyber-red;
+    box-shadow: 0 0 8px rgba(255, 51, 102, 0.5);
+  }
+
+  /* ── Cyber Glow Text ────────────────────────────────── */
+
+  .text-glow-cyan {
+    color: var(--cyber-cyan);
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+  }
+
+  .text-glow-green {
+    color: var(--cyber-green);
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+  }
+
+  /* ── Progress Bar ───────────────────────────────────── */
+
+  .progress-bar {
+    @apply h-1.5 rounded-full overflow-hidden;
+    background: rgba(30, 41, 59, 0.8);
+  }
+
+  .progress-bar-fill {
+    @apply h-full rounded-full transition-all duration-500;
+    background: linear-gradient(90deg, var(--cyber-cyan), var(--cyber-green));
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+  }
+
+  /* ── Scan Line Animation ────────────────────────────── */
+
+  .scan-line-overlay {
+    @apply absolute inset-0 pointer-events-none overflow-hidden;
+  }
+
+  .scan-line-overlay::after {
+    content: "";
+    @apply absolute left-0 right-0 h-px;
+    background: linear-gradient(90deg, transparent, var(--cyber-cyan), transparent);
+    animation: scanLine 4s linear infinite;
+    opacity: 0.3;
+  }
+}
+
+/* ── React Flow Override ────────────────────────────────── */
+
+.react-flow__background {
+  background-color: var(--surface-900) !important;
+}
+
+.react-flow__edge-path {
+  stroke: rgba(0, 240, 255, 0.3) !important;
+}
+
+.react-flow__node {
+  @apply glass-card !important;
+}
