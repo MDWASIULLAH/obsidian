@@ -1,9 +1,7 @@
 /**
- * SENTINEL AI X — API Client with LocalStorage Mock Backend
+ * SENTINEL AI X — API Client
  *
  * Typed API client for all backend endpoints.
- * Automatically falls back to a LocalStorage-backed mock database
- * if the Python backend is unreachable.
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -450,322 +448,7 @@ export interface PostureTrendResponse {
 }
 
 
-const demoRepos: Repository[] = [
-  {
-    id: "demo-1",
-    github_id: 1,
-    full_name: "sentinel-org/web-api",
-    name: "web-api",
-    owner: "sentinel-org",
-    default_branch: "main",
-    description: "Production REST API with auth and payments",
-    language: "Python",
-    is_active: true,
-    security_score: 78,
-    total_scans: 14,
-    total_findings: 23,
-    total_patches: 8,
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "demo-2",
-    github_id: 2,
-    full_name: "sentinel-org/frontend-app",
-    name: "frontend-app",
-    owner: "sentinel-org",
-    default_branch: "main",
-    description: "React SPA with SSR and user auth",
-    language: "TypeScript",
-    is_active: true,
-    security_score: 91,
-    total_scans: 8,
-    total_findings: 5,
-    total_patches: 3,
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-const demoScans: Scan[] = [
-  {
-    id: "scan-1",
-    repository_id: "demo-1",
-    commit_sha: "a1b2c3d4",
-    branch: "main",
-    trigger: "push",
-    status: "completed",
-    current_agent: null,
-    total_findings: 12,
-    critical_count: 2,
-    high_count: 3,
-    medium_count: 5,
-    low_count: 2,
-    patches_generated: 4,
-    tests_generated: 2,
-    security_score: 72,
-    confidence: 0.95,
-    threat_model: "Available",
-    pr_url: "https://github.com/sentinel-org/web-api/pull/42",
-    duration_seconds: 145,
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: "scan-2",
-    repository_id: "demo-2",
-    commit_sha: "f9e8d7c6",
-    branch: "main",
-    trigger: "manual",
-    status: "running",
-    current_agent: "secret_scanner",
-    total_findings: 2,
-    critical_count: 0,
-    high_count: 1,
-    medium_count: 1,
-    low_count: 0,
-    patches_generated: 1,
-    tests_generated: 0,
-    security_score: 88,
-    confidence: 0.91,
-    threat_model: "Available",
-    pr_url: null,
-    duration_seconds: null,
-    created_at: new Date(Date.now() - 600000).toISOString(),
-  }
-];
-
-const demoReports: Report[] = [
-  {
-    id: "rpt-1",
-    name: "Security Assessment — web-api v2.4.1",
-    repository: "sentinel-org/web-api",
-    date: new Date(Date.now() - 3600000).toISOString(),
-    score: 72,
-    findings: 7,
-    patches: 3,
-    status: "blocked",
-  },
-  {
-    id: "rpt-2",
-    name: "Security Assessment — frontend-app v1.8.0",
-    repository: "sentinel-org/frontend-app",
-    date: new Date(Date.now() - 86400000).toISOString(),
-    score: 91,
-    findings: 5,
-    patches: 3,
-    status: "approved",
-  }
-];
-
-// ── LocalStorage Engine ─────────────────────────────────────────────────
-
-function getStore<T>(key: string, initial: T): T {
-  if (!isBrowser) return initial;
-  try {
-    const val = localStorage.getItem(`sentinel_${key}`);
-    if (val) return JSON.parse(val);
-    localStorage.setItem(`sentinel_${key}`, JSON.stringify(initial));
-  } catch (e) {
-    console.error("Local storage error", e);
-  }
-  return initial;
-}
-
-function setStore<T>(key: string, value: T) {
-  if (!isBrowser) return;
-  try {
-    localStorage.setItem(`sentinel_${key}`, JSON.stringify(value));
-  } catch (e) {
-    console.error("Local storage error", e);
-  }
-}
-
-// ── Mock Router ─────────────────────────────────────────────────
-
-async function mockRouter<T>(endpoint: string, options: RequestInit): Promise<T> {
-  // Artifical network delay
-  await new Promise((res) => setTimeout(res, 400));
-  const method = options.method || "GET";
-
-  const repos = getStore<Repository[]>("repos", demoRepos);
-  const scans = getStore<Scan[]>("scans", demoScans);
-  const reports = getStore<Report[]>("reports", demoReports);
-
-  // GET /dashboard
-  if (endpoint === "/dashboard" && method === "GET") {
-    let total_findings = 0;
-    let critical = 0;
-    let total_score = 0;
-    
-    repos.forEach(r => {
-      total_findings += r.total_findings;
-      total_score += r.security_score;
-    });
-
-    scans.forEach(s => {
-      critical += s.critical_count;
-    });
-
-    const active_scans = scans.filter(s => s.status === "running").length;
-    const average_score = repos.length ? Math.round(total_score / repos.length) : 100;
-
-    return {
-      total_repositories: repos.length,
-      active_scans,
-      total_findings,
-      critical_findings: critical,
-      average_security_score: average_score,
-      patches_generated: 12,
-      tests_generated: 5,
-      recent_scans: scans.slice(0, 5),
-      severity_distribution: {
-        Critical: critical,
-        High: 15,
-        Medium: 24,
-        Low: 8
-      }
-    } as unknown as T;
-  }
-
-  // GET /repositories
-  if (endpoint.match(/^\/repositories(\?.*)?$/) && method === "GET") {
-    return repos as unknown as T;
-  }
-
-  // POST /repositories
-  if (endpoint === "/repositories" && method === "POST") {
-    const body = JSON.parse(options.body as string);
-    const full_name = body.full_name.trim();
-    // Check if exists
-    if (repos.find(r => r.full_name === full_name)) {
-      throw new Error("Repository already exists");
-    }
-    const parts = full_name.split("/");
-    const newRepo: Repository = {
-      id: `repo-${Date.now()}`,
-      github_id: Date.now(),
-      full_name: full_name,
-      name: parts.length > 1 ? parts[1] : parts[0],
-      owner: parts.length > 1 ? parts[0] : "local",
-      default_branch: "main",
-      description: "Added in demo mode (Local Mock Backend)",
-      language: "TypeScript",
-      is_active: true,
-      security_score: 100,
-      total_scans: 0,
-      total_findings: 0,
-      total_patches: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    repos.unshift(newRepo);
-    setStore("repos", repos);
-    return newRepo as unknown as T;
-  }
-
-  // GET /repositories/:id
-  if (endpoint.match(/^\/repositories\/[^\/]+$/) && method === "GET") {
-    const id = endpoint.split("/").pop();
-    const repo = repos.find(r => r.id === id);
-    if (!repo) throw new Error("Not found");
-    return repo as unknown as T;
-  }
-
-  // GET /scans
-  if (endpoint.match(/^\/scans(\?.*)?$/) && method === "GET") {
-    return {
-      items: scans,
-      total: scans.length,
-      page: 1,
-      total_pages: 1
-    } as unknown as T;
-  }
-
-  // GET /reports
-  if (endpoint.match(/^\/reports(\?.*)?$/) && method === "GET") {
-    return reports as unknown as T;
-  }
-
-  // POST /reports
-  if (endpoint === "/reports" && method === "POST") {
-    const newReport: Report = {
-      id: `rpt-${Date.now()}`,
-      name: `Security Assessment — Generated ${new Date().toLocaleTimeString()}`,
-      repository: repos[0]?.full_name || "unknown/repo",
-      date: new Date().toISOString(),
-      score: repos[0]?.security_score || 85,
-      findings: repos[0]?.total_findings || 5,
-      patches: repos[0]?.total_patches || 2,
-      status: "pending"
-    };
-    reports.unshift(newReport);
-    setStore("reports", reports);
-    return newReport as unknown as T;
-  }
-
-  // GET /security-timeline/{repo}/snapshots
-  if (endpoint.match(/^\/security-timeline\/[^\/]+\/[^\/]+\/snapshots(\?.*)?$/) && method === "GET") {
-    return [
-      {
-        id: "snap-mock-1",
-        captured_at: new Date().toISOString(),
-        trigger: "manual",
-        security_score: 85,
-        total_threats: 12,
-        total_vulnerabilities: 5,
-        total_assets: 45,
-        attack_chain_count: 2,
-        critical_findings: 1,
-        high_findings: 3
-      },
-      {
-        id: "snap-mock-2",
-        captured_at: new Date(Date.now() - 86400000).toISOString(),
-        trigger: "webhook",
-        security_score: 75,
-        total_threats: 15,
-        total_vulnerabilities: 8,
-        total_assets: 44,
-        attack_chain_count: 3,
-        critical_findings: 2,
-        high_findings: 4
-      }
-    ] as unknown as T;
-  }
-
-  // GET /security-timeline/{repo}/trend
-  if (endpoint.match(/^\/security-timeline\/[^\/]+\/[^\/]+\/trend(\?.*)?$/) && method === "GET") {
-    return {
-      repository_full_name: "sentinel-org/web-api",
-      trend_category: "improving",
-      delta_score: 10,
-      days_analyzed: 30,
-      snapshot_count: 2
-    } as unknown as T;
-  }
-
-  // GET /security-timeline/diff/{a}/{b}
-  if (endpoint.match(/^\/security-timeline\/diff\/[^\/]+\/[^\/]+$/) && method === "GET") {
-    return {
-      snapshot_a: "snap-mock-2",
-      snapshot_b: "snap-mock-1",
-      delta_score: 10,
-      threats_resolved: 3,
-      threats_introduced: 0,
-      assets_added: 1,
-      assets_removed: 0,
-      vulnerabilities_fixed: 3,
-      vulnerabilities_new: 0,
-      new_attack_chains: 0,
-      resolved_attack_chains: 1
-    } as unknown as T;
-  }
-
-  // Fallback for everything else
-  return {} as T;
-}
-
-// ── Fetch Wrapper ─────────────────────────────────────────────────
+// Fetch Wrapper
 
 async function fetchAPI<T>(
   endpoint: string,
@@ -786,13 +469,10 @@ async function fetchAPI<T>(
     }
 
     return await response.json();
-  } catch (error) {
-    console.warn(`[Local Mock Backend] Intercepting ${options.method || 'GET'} ${endpoint} due to unreachable backend.`);
-    try {
-      return await mockRouter<T>(endpoint, options);
-    } catch (mockErr: any) {
-      throw new Error(`Mock Error: ${mockErr.message}`);
-    }
+  } catch (error: any) {
+    throw new Error(
+      `Backend request failed for ${options.method || "GET"} ${endpoint}: ${error.message || error}`,
+    );
   }
 }
 
@@ -832,6 +512,15 @@ export const api = {
   getFindings: (scanId: string, severity?: string) => {
     const params = severity ? `?severity=${severity}` : "";
     return fetchAPI<Finding[]>(`/scans/${scanId}/findings${params}`);
+  },
+  listFindings: (params?: { severity?: string; page?: number; page_size?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.severity) searchParams.set("severity", params.severity);
+    if (params?.page) searchParams.set("page", String(params.page));
+    if (params?.page_size) searchParams.set("page_size", String(params.page_size));
+    return fetchAPI<{ items: Finding[]; total: number; page: number; total_pages: number }>(
+      `/findings?${searchParams.toString()}`,
+    );
   },
 
   // Agents

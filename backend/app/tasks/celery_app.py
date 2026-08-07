@@ -354,11 +354,18 @@ def process_github_event(
                     )
                     repo = result.scalar_one_or_none()
                     if repo:
+                        if event_type == "push":
+                            trigger = ScanTrigger.PUSH
+                        elif event_type == "pull_request":
+                            trigger = ScanTrigger.PULL_REQUEST
+                        else:
+                            trigger = ScanTrigger.MANUAL
+
                         scan = Scan(
                             repository_id=repo.id,
                             commit_sha=commit_sha or "",
                             branch=branch or repo.default_branch,
-                            trigger=ScanTrigger.PUSH if event_type == "push" else ScanTrigger.PULL_REQUEST,
+                            trigger=trigger,
                             status=ScanStatus.QUEUED,
                             pr_number=event_context.get("pr_number"),
                         )

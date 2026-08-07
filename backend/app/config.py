@@ -6,7 +6,7 @@ from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,6 +15,7 @@ class Environment(str, Enum):
     DEVELOPMENT = "development"
     STAGING = "staging"
     PRODUCTION = "production"
+    RELEASE = "release"
 
 
 class Settings(BaseSettings):
@@ -26,7 +27,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", ".env.local"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -75,12 +76,16 @@ class Settings(BaseSettings):
 
     # ── GitHub ─────────────────────────────────────────────────────
     github_app_id: str = ""
+    github_app_slug: str = ""
+    github_app_private_key: str = ""
+    github_private_key: str = ""
     github_app_private_key_path: str = "./github-app-key.pem"
     github_app_installation_id: int = 0
     github_webhook_secret: str = ""
     github_token: str = ""
     github_api_url: str = "https://api.github.com"
     github_graphql_url: str = "https://api.github.com/graphql"
+    frontend_url: str = "http://localhost:3000"
 
     # ── JWT Auth ───────────────────────────────────────────────────
     jwt_secret_key: str = "change-me-jwt-secret-key"
@@ -95,9 +100,15 @@ class Settings(BaseSettings):
     repo_cache_dir: Path = Path("/tmp/repos")
 
     # ── Convenience ────────────────────────────────────────────────
+    @field_validator("debug", mode="before")
+    @classmethod
+    def parse_debug_flag(cls, value: object) -> object:
+        if isinstance(value, str) and value.strip().lower() in {"release", "production", "prod"}:
+            return False
+        return value
     @property
     def is_production(self) -> bool:
-        return self.app_env == Environment.PRODUCTION
+        return self.app_env in {Environment.PRODUCTION, Environment.RELEASE}
 
     def get_model_for_tier(self, tier: str) -> str:
         """Return the configured model ID for a given capability tier."""

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from pydantic import BaseModel
 
 from app.models.database import get_db
@@ -9,7 +9,10 @@ from app.models.user import User
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 class AuthPayload(BaseModel):
-    github_id: str
+    provider: str = "github"
+    provider_account_id: str | None = None
+    github_id: str | None = None
+    google_id: str | None = None
     username: str
     email: str | None = None
     avatar_url: str | None = None
@@ -17,28 +20,48 @@ class AuthPayload(BaseModel):
 
 @router.post("/sync")
 async def sync_user(payload: AuthPayload, db: AsyncSession = Depends(get_db)):
-    """Sync NextAuth GitHub session to the backend database."""
-    # Find existing user
-    stmt = select(User).where(User.github_id == payload.github_id)
+    """Sync a NextAuth OAuth identity to the backend database."""
+    provider = payload.provider.lower()
+    provider_account_id = payload.provider_account_id or payload.github_id or payload.google_id
+    if not provider_account_id:
+        raise HTTPException(status_code=400, detail="provider_account_id is required")
+
+    conditions = [
+        (User.provider == provider) & (User.provider_account_id == provider_account_id),
+    ]
+    if payload.github_id:
+        conditions.append(User.github_id == payload.github_id)
+    if payload.google_id:
+        conditions.append(User.google_id == payload.google_id)
+
+    stmt = select(User).where(or_(*conditions))
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     
     if user:
+        user.provider = provider
+        user.provider_account_id = provider_account_id
         user.username = payload.username
         if payload.email:
             user.email = payload.email
         if payload.avatar_url:
             user.avatar_url = payload.avatar_url
-        if payload.access_token:
+        if payload.github_id:
+            user.github_id = payload.github_id
+        if payload.google_id:
+            user.google_id = payload.google_id
+        if provider == "github" and payload.access_token:
             user.github_token = payload.access_token
     else:
-        # Create new user
         user = User(
-            github_id=payload.github_id,
+            provider=provider,
+            provider_account_id=provider_account_id,
+            github_id=payload.github_id if provider == "github" else None,
+            google_id=payload.google_id if provider == "google" else None,
             username=payload.username,
             email=payload.email,
             avatar_url=payload.avatar_url,
-            github_token=payload.access_token
+            github_token=payload.access_token if provider == "github" else None,
         )
         db.add(user)
     

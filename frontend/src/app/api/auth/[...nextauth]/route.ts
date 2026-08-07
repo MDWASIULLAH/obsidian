@@ -1,25 +1,83 @@
 import NextAuth from "next-auth";
 import GithubProvider from "next-auth/providers/github";
+import GoogleProvider from "next-auth/providers/google";
 
-const handler = NextAuth({
-  providers: [
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+async function syncBackendUser(account: any, token: any) {
+  if (!account?.provider || !account?.providerAccountId) return null;
+
+  const provider = account.provider;
+  const payload = {
+    provider,
+    provider_account_id: account.providerAccountId,
+    github_id: provider === "github" ? account.providerAccountId : undefined,
+    google_id: provider === "google" ? account.providerAccountId : undefined,
+    username:
+      token.name ||
+      token.email ||
+      `${provider}-${String(account.providerAccountId).slice(0, 8)}`,
+    email: token.email,
+    avatar_url: token.picture,
+    access_token: provider === "github" ? account.access_token : undefined,
+  };
+
+  const response = await fetch(`${API_BASE}/api/v1/auth/sync`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Backend auth sync failed with ${response.status}`);
+  }
+
+  return response.json();
+}
+
+const providers: any[] = [];
+
+if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
+  providers.push(
     GithubProvider({
-      clientId: process.env.GITHUB_ID || "",
-      clientSecret: process.env.GITHUB_SECRET || "",
+      clientId: process.env.GITHUB_ID,
+      clientSecret: process.env.GITHUB_SECRET,
       authorization: { params: { scope: "read:user user:email repo" } },
     }),
-  ],
+  );
+}
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_SECRET;
+
+if (googleClientId && googleClientSecret) {
+  providers.push(
+    GoogleProvider({
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+      authorization: { params: { scope: "openid email profile" } },
+    }),
+  );
+}
+
+const handler = NextAuth({
+  providers,
   callbacks: {
     async jwt({ token, account }) {
-      // Persist the OAuth access_token to the token right after signin
       if (account) {
-        token.accessToken = account.access_token;
+        try {
+          const synced = await syncBackendUser(account, token);
+          (token as any).backendUserId = synced?.user_id;
+          (token as any).provider = account.provider;
+        } catch (error) {
+          console.error("OBSIDIAN backend auth sync failed", error);
+        }
       }
       return token;
     },
-    async session({ session, token, user }) {
-      // Send properties to the client, like an access_token from a provider.
-      (session as any).accessToken = token.accessToken;
+    async session({ session, token }) {
+      (session as any).userId = (token as any).backendUserId;
+      (session as any).provider = (token as any).provider;
       return session;
     }
   },

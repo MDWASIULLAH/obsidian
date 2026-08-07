@@ -74,11 +74,13 @@ class GitHubClient:
         self._graphql_url = settings.github_graphql_url
         self._webhook_secret = settings.github_webhook_secret
         self._app_id = settings.github_app_id
+        self._app_private_key = settings.github_app_private_key or settings.github_private_key
         self._app_key_path = settings.github_app_private_key_path
         self._installation_id = settings.github_app_installation_id
         self._repo_cache = settings.repo_cache_dir
         self._installation_token: str | None = None
         self._installation_token_expires: float = 0.0
+        self._installation_tokens: dict[int, tuple[str, float]] = {}
 
         self._headers = {
             "Authorization": f"Bearer {self._token}",
@@ -99,11 +101,14 @@ class GitHubClient:
             return ""
 
         key_path = Path(self._app_key_path)
-        if not key_path.exists():
+        private_key = self._app_private_key.replace("\\n", "\n").strip()
+        if private_key:
+            pass
+        elif key_path.exists():
+            private_key = key_path.read_text()
+        else:
             logger.warning("GitHub App private key not found", path=str(key_path))
             return ""
-
-        private_key = key_path.read_text()
         now = int(time.time())
         payload = {
             "iat": now - 60,   # Allow 60s clock skew
@@ -112,22 +117,25 @@ class GitHubClient:
         }
         return pyjwt.encode(payload, private_key, algorithm="RS256")
 
-    async def _get_installation_token(self) -> str:
+    async def _get_installation_token(self, installation_id: int | None = None) -> str:
         """
         Exchange App JWT for an installation access token.
         Tokens are cached for their ~1 hour validity window.
         """
         now = time.time()
-        if self._installation_token and now < self._installation_token_expires - 60:
-            return self._installation_token
+        target_installation_id = installation_id or self._installation_id
+        if target_installation_id in self._installation_tokens:
+            token, expires_at = self._installation_tokens[target_installation_id]
+            if now < expires_at - 60:
+                return token
 
         jwt_token = self._generate_app_jwt()
-        if not jwt_token:
+        if not jwt_token or not target_installation_id:
             return self._token  # Fall back to PAT
 
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                f"{self._api_url}/app/installations/{self._installation_id}/access_tokens",
+                f"{self._api_url}/app/installations/{target_installation_id}/access_tokens",
                 headers={
                     "Authorization": f"Bearer {jwt_token}",
                     "Accept": "application/vnd.github+json",
@@ -136,9 +144,12 @@ class GitHubClient:
             )
             if resp.status_code == 201:
                 data = resp.json()
-                self._installation_token = data["token"]
-                self._installation_token_expires = now + 3600
-                return self._installation_token
+                expires_at = now + 3600
+                self._installation_tokens[target_installation_id] = (data["token"], expires_at)
+                if target_installation_id == self._installation_id:
+                    self._installation_token = data["token"]
+                    self._installation_token_expires = expires_at
+                return data["token"]
 
         return self._token  # Fall back to PAT on failure
 
@@ -153,6 +164,53 @@ class GitHubClient:
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         }
+
+    def _app_headers(self) -> dict[str, str]:
+        """Return GitHub App JWT headers for installation management endpoints."""
+        jwt_token = self._generate_app_jwt()
+        if not jwt_token:
+            raise RuntimeError("GitHub App credentials are not configured")
+        return {
+            "Authorization": f"Bearer {jwt_token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+
+    async def get_installation(self, installation_id: int) -> dict:
+        """Fetch GitHub App installation metadata."""
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.get(
+                f"{self._api_url}/app/installations/{installation_id}",
+                headers=self._app_headers(),
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def list_installation_repositories(self, installation_id: int) -> list[dict]:
+        """List every repository authorized for a GitHub App installation."""
+        token = await self._get_installation_token(installation_id)
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        repos: list[dict] = []
+        page = 1
+        async with httpx.AsyncClient(timeout=60) as client:
+            while True:
+                response = await client.get(
+                    f"{self._api_url}/installation/repositories",
+                    headers=headers,
+                    params={"per_page": 100, "page": page},
+                )
+                response.raise_for_status()
+                data = response.json()
+                batch = data.get("repositories", [])
+                repos.extend(batch)
+                if len(batch) < 100:
+                    break
+                page += 1
+        return repos
 
     # ═══════════════════════════════════════════════════════════
     # Webhook Verification
@@ -343,6 +401,7 @@ class GitHubClient:
         "deployment":                 (True,  ["infra_security", "container_security"]),
         "deployment_status":          (False, []),
         "workflow_run":               (False, ["infra_security"]),
+        "workflow_job":               (False, ["infra_security"]),
         "check_run":                  (False, []),
         "check_suite":                (False, []),
         "security_advisory":          (True,  ["dependency_intel", "threat_modeler"]),

@@ -569,8 +569,17 @@ async def github_feedback_node(state: dict) -> dict:
                     base_branch=state.get("branch")
                 )
                 
-                # Inline comments for patches (mocked for now, assuming patch has line info)
-                # await client.create_review_comment(...)
+                for patch in patches:
+                    if not all((patch.get("file_path"), patch.get("line_start"))):
+                        continue
+                    await client.create_review_comment(
+                        full_name=repo,
+                        pr_number=pr_data["number"],
+                        commit_sha=sha,
+                        file_path=patch["file_path"],
+                        line=int(patch["line_start"]),
+                        body=patch.get("explanation", "OBSIDIAN generated a security patch for this line."),
+                    )
                 
                 # Add labels
                 await client.add_labels(repo, pr_data["number"], ["security", "auto-patch"])

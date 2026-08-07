@@ -142,29 +142,29 @@ function DetailPanel({
             </h4>
             {trajectory.predictions.map((pred, i) => (
               <div key={i} className="bg-white/5 rounded-lg p-3 space-y-2 text-xs">
-                {pred.predicted_peak_severity && (
+                {typeof pred.predicted_peak_severity === "string" && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Peak Severity</span>
-                    <span className="font-medium" style={{ color: SEV_COLORS[pred.predicted_peak_severity as string] }}>
-                      {pred.predicted_peak_severity as string}
+                    <span className="font-medium" style={{ color: SEV_COLORS[pred.predicted_peak_severity] }}>
+                      {pred.predicted_peak_severity}
                     </span>
                   </div>
                 )}
-                {pred.weaponisation_probability_30d != null && (
+                {typeof pred.weaponisation_probability_30d === "number" && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Weaponisation 30d</span>
-                    <span className="text-red-400 font-medium">{((pred.weaponisation_probability_30d as number) * 100).toFixed(0)}%</span>
+                    <span className="text-red-400 font-medium">{(pred.weaponisation_probability_30d * 100).toFixed(0)}%</span>
                   </div>
                 )}
-                {pred.remediation_deadline && (
+                {typeof pred.remediation_deadline === "string" && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Remediate By</span>
-                    <span className="text-amber-400 font-medium">{pred.remediation_deadline as string}</span>
+                    <span className="text-amber-400 font-medium">{pred.remediation_deadline}</span>
                   </div>
                 )}
-                {pred.reasoning && (
+                {typeof pred.reasoning === "string" && (
                   <p className="text-gray-400 text-[11px] mt-1 border-t border-white/5 pt-2">
-                    {pred.reasoning as string}
+                    {pred.reasoning}
                   </p>
                 )}
               </div>

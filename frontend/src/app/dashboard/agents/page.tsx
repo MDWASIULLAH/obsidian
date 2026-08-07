@@ -55,6 +55,7 @@ const tierInfo: Record<string, { label: string; icon: any; color: string }> = {
 export default function AgentsPage() {
   const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadAgents();
@@ -62,36 +63,16 @@ export default function AgentsPage() {
 
   async function loadAgents() {
     try {
+      setError(null);
       const data = await api.listAgents();
       setAgents(data);
-    } catch {
-      // Build demo from metadata
-      setAgents(
-        Object.entries(agentMeta).map(([name, meta]) => ({
-          name,
-          purpose: `Security analysis — ${meta.phase} phase`,
-          model_tier: name.includes("approval") || name.includes("threat") || name.includes("attack") || name.includes("learning") || name.includes("business") || name.includes("llm")
-            ? "reasoning"
-            : name.includes("secrets") || name.includes("dependency") || name.includes("compliance")
-            ? "lightweight"
-            : "code",
-          reasoning_strategy: name.includes("threat") || name.includes("attack") || name.includes("approval") || name.includes("business") || name.includes("llm") || name.includes("arch")
-            ? "tree_of_thought"
-            : "chain_of_thought",
-          inputs: ["code_diff"],
-          outputs: ["findings"],
-          metrics: {
-            total_runs: Math.floor(Math.random() * 50),
-            success_rate: 0.85 + Math.random() * 0.15,
-            total_findings: Math.floor(Math.random() * 100),
-          },
-        }))
-      );
+    } catch (err: any) {
+      setError(err.message || "Unable to load security agents");
+      setAgents([]);
     } finally {
       setLoading(false);
     }
   }
-
   const scanAgents = agents.filter((a) => agentMeta[a.name]?.phase === "Scan");
   const actionAgents = agents.filter((a) => agentMeta[a.name]?.phase === "Action");
 
@@ -119,6 +100,12 @@ export default function AgentsPage() {
           {agents.length} autonomous agents across 2 execution phases
         </p>
       </motion.div>
+
+      {error && (
+        <motion.div variants={itemVariants} className="glass-card p-6 border-red-500/30 text-sm text-red-200">
+          {error}
+        </motion.div>
+      )}
 
       {/* Pipeline Visualization */}
       <motion.div variants={itemVariants} className="glass-card p-6">

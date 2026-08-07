@@ -124,8 +124,75 @@ async def github_webhook(
         repo=repo_full_name,
     )
 
-    # Handle installation events (no repo processing needed)
-    if event_type in ("installation", "installation_repositories", "ping"):
+    # Handle GitHub App installation lifecycle before repository-scoped processing.
+    if event_type in ("installation", "installation_repositories"):
+        from app.models.github_installation import GitHubInstallation
+
+        installation = payload.get("installation") or {}
+        installation_id = installation.get("id")
+        account = installation.get("account") or {}
+
+        if installation_id:
+            result = await db.execute(
+                select(GitHubInstallation).where(
+                    GitHubInstallation.installation_id == installation_id
+                )
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                record = GitHubInstallation(installation_id=installation_id)
+                db.add(record)
+
+            record.account_login = account.get("login") or "unknown"
+            record.account_type = account.get("type") or "User"
+            record.target_type = installation.get("target_type")
+            record.repository_selection = installation.get("repository_selection") or "selected"
+            record.permissions = installation.get("permissions") or {}
+            record.events = installation.get("events") or []
+            record.is_active = event_data.action != "deleted"
+
+            repo_payloads = []
+            if event_type == "installation":
+                repo_payloads = payload.get("repositories") or []
+            elif event_data.action == "added":
+                repo_payloads = payload.get("repositories_added") or []
+
+            for repo_raw in repo_payloads:
+                full_name = repo_raw.get("full_name")
+                if not full_name:
+                    continue
+                repo_result = await db.execute(
+                    select(Repository).where(Repository.github_id == repo_raw.get("id", 0))
+                )
+                repo = repo_result.scalar_one_or_none()
+                if repo is None:
+                    repo = Repository(github_id=repo_raw.get("id", 0), full_name=full_name)
+                    db.add(repo)
+                owner, name = full_name.split("/", 1)
+                repo.full_name = full_name
+                repo.name = repo_raw.get("name") or name
+                repo.owner = owner
+                repo.default_branch = repo_raw.get("default_branch") or "main"
+                repo.clone_url = repo_raw.get("clone_url") or ""
+                repo.description = repo_raw.get("description")
+                repo.language = repo_raw.get("language")
+                repo.installation_id = installation_id
+                repo.is_active = True
+
+            if event_type == "installation_repositories" and event_data.action == "removed":
+                for repo_raw in payload.get("repositories_removed") or []:
+                    repo_result = await db.execute(
+                        select(Repository).where(Repository.github_id == repo_raw.get("id", 0))
+                    )
+                    repo = repo_result.scalar_one_or_none()
+                    if repo:
+                        repo.is_active = False
+
+            await db.commit()
+
+        return {"status": "installation_synced", "event": event_type}
+
+    if event_type == "ping":
         return {"status": "acknowledged", "event": event_type}
 
     # Find the repository in our DB (must be tracked to process)
@@ -134,12 +201,11 @@ async def github_webhook(
     )
     repo = result.scalar_one_or_none()
 
-    if not repo and event_type not in _PIPELINE_EVENTS:
-        # Auto-register on push/PR, ignore unknown repos for other events
+    if not repo and not repo_full_name:
         return {"status": "repo_not_tracked", "event": event_type}
 
-    # Auto-register repository on first push
-    if not repo and event_type == "push":
+    # Auto-register repositories discovered through any repository-scoped App event.
+    if not repo and repo_full_name:
         repo_raw = payload.get("repository", {})
         repo = Repository(
             github_id=repo_raw.get("id", 0),
@@ -473,6 +539,33 @@ async def list_findings(
     result = await db.execute(query)
     findings = result.scalars().all()
     return [FindingResponse.model_validate(f) for f in findings]
+
+
+@api_router.get("/findings", tags=["findings"])
+async def list_all_findings(
+    severity: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+) -> PaginatedResponse:
+    """List findings across all scans."""
+    query = select(Finding).order_by(Finding.created_at.desc())
+    count_query = select(func.count(Finding.id))
+    if severity:
+        query = query.where(Finding.severity == severity)
+        count_query = count_query.where(Finding.severity == severity)
+
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
+    findings = result.scalars().all()
+    return PaginatedResponse(
+        items=[FindingResponse.model_validate(f) for f in findings],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=max(1, (total + page_size - 1) // page_size),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════

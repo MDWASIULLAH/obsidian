@@ -1,28 +1,75 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Shield, CheckCircle, Github } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Shield, CheckCircle, Github, RefreshCw } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-export default function SetupPage() {
-  const [isProvisioning, setIsProvisioning] = useState(false);
-  const router = useRouter();
-  const { data: session } = useSession();
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  const handleAuthorize = async () => {
-    setIsProvisioning(true);
+export default function SetupPage() {
+  const [isWorking, setIsWorking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [syncSummary, setSyncSummary] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session } = useSession();
+  const userId = (session as any)?.userId as string | undefined;
+  const installationId = searchParams.get("installation_id");
+
+  useEffect(() => {
+    if (!installationId || !userId || isWorking || syncSummary) return;
+
+    const syncInstallation = async () => {
+      setIsWorking(true);
+      setError(null);
+      try {
+        const response = await fetch(`${API_BASE}/api/v1/onboarding/github-app/sync-installation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            installation_id: Number(installationId),
+            user_id: userId,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "GitHub App installation sync failed");
+        }
+
+        localStorage.setItem("obsidian_onboarded", "true");
+        setSyncSummary(
+          `${data.repositories_authorized} repositories authorized for ${data.account}`,
+        );
+        setTimeout(() => router.push("/dashboard"), 1000);
+      } catch (err: any) {
+        setError(err.message || "Could not sync GitHub App installation");
+      } finally {
+        setIsWorking(false);
+      }
+    };
+
+    syncInstallation();
+  }, [installationId, userId, isWorking, syncSummary, router]);
+
+  const handleInstall = async () => {
+    setIsWorking(true);
+    setError(null);
     try {
-      await fetch("http://localhost:8000/api/v1/onboarding/provision-security-center", {
+      const response = await fetch(`${API_BASE}/api/v1/onboarding/github-app/install-url`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: (session as any)?.userId || "demo-user-id" })
+        body: JSON.stringify({ user_id: userId }),
       });
-      localStorage.setItem("obsidian_onboarded", "true");
-      router.push("/dashboard");
-    } catch (e) {
-      console.error(e);
-      setIsProvisioning(false);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || "GitHub App install URL is not configured");
+      }
+      window.location.href = data.install_url;
+    } catch (err: any) {
+      setError(err.message || "Could not start GitHub App installation");
+      setIsWorking(false);
     }
   };
 
@@ -34,56 +81,71 @@ export default function SetupPage() {
             <Shield className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-100">Authorize OBSIDIAN Autonomous Agent</h1>
-            <p className="text-gray-400">Deploy the 24/7 security engine to your GitHub account.</p>
+            <h1 className="text-2xl font-bold text-gray-100">Install OBSIDIAN GitHub App</h1>
+            <p className="text-gray-400">Authorize repositories for continuous backend monitoring.</p>
           </div>
         </div>
 
         <div className="space-y-6 mb-10">
           <p className="text-gray-300">
-            To provide true autonomous security, OBSIDIAN needs your permission to create a central control repository on your GitHub account.
+            OBSIDIAN runs inside its own backend. It listens to GitHub webhooks, imports authorized repositories, queues scans, and streams live progress without committing monitoring files to your repositories.
           </p>
-          
+
           <div className="bg-surface-900 rounded-lg p-5 border border-surface-800">
             <h3 className="font-semibold text-gray-200 mb-4 flex items-center gap-2">
-              <Github className="w-5 h-5 text-gray-400" /> What will happen?
+              <Github className="w-5 h-5 text-gray-400" /> What happens next?
             </h3>
             <ul className="space-y-3">
               <li className="flex gap-3 text-sm text-gray-400">
                 <CheckCircle className="w-5 h-5 text-teal-500 shrink-0" />
-                <span>A new private repository named <strong>obsidian-security-center</strong> will be created on your GitHub account.</span>
+                <span>Install the GitHub App on selected repositories or the whole account.</span>
               </li>
               <li className="flex gap-3 text-sm text-gray-400">
                 <CheckCircle className="w-5 h-5 text-teal-500 shrink-0" />
-                <span>A robust 24/7 <strong>Python agent</strong> and GitHub Actions workflow will be committed to this repository.</span>
+                <span>OBSIDIAN imports authorized public, private, and organization repositories automatically.</span>
               </li>
               <li className="flex gap-3 text-sm text-gray-400">
                 <CheckCircle className="w-5 h-5 text-teal-500 shrink-0" />
-                <span>The agent will autonomously clone, scan, and monitor your repositories, pushing real-time findings to this dashboard.</span>
+                <span>GitHub webhooks trigger the backend pipeline on pushes, pull requests, alerts, releases, workflow events, and repository changes.</span>
               </li>
             </ul>
           </div>
+
+          {syncSummary && (
+            <div className="rounded-lg border border-teal-500/30 bg-teal-500/10 px-4 py-3 text-sm text-teal-200">
+              {syncSummary}
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {error}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-4">
-          <button 
+          <button
             onClick={() => router.push("/")}
             className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-surface-800 transition-colors"
           >
             Cancel
           </button>
-          <button 
-            onClick={handleAuthorize}
-            disabled={isProvisioning}
+          <button
+            onClick={handleInstall}
+            disabled={isWorking || !userId}
             className="px-6 py-2.5 rounded-lg text-sm font-medium bg-primary-500 text-surface-950 hover:bg-primary-400 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isProvisioning ? (
+            {isWorking ? (
               <>
-                <div className="w-4 h-4 border-2 border-surface-950/30 border-t-surface-950 rounded-full animate-spin" />
-                Deploying Engine...
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Syncing GitHub App...
               </>
             ) : (
-              "Authorize & Deploy"
+              <>
+                <Github className="w-4 h-4" />
+                Install GitHub App
+              </>
             )}
           </button>
         </div>

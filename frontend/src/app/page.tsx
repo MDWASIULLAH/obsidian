@@ -47,15 +47,24 @@ export default function LandingPage() {
             OBSIDIAN actively monitors your GitHub repositories, running autonomous agentic security checks on every push, and fixing vulnerabilities before they reach production.
           </p>
 
-          <button 
-            onClick={() => signIn("github", { callbackUrl: '/dashboard' })}
-            className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 bg-primary-600 hover:bg-primary-500 text-white font-semibold rounded-xl overflow-hidden transition-all shadow-[0_0_40px_-10px_rgba(56,189,248,0.5)]"
-          >
-            <Github className="w-5 h-5 relative z-10" />
-            <span className="relative z-10 text-lg">Connect GitHub to Start</span>
-            <ChevronRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
-            <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={() => signIn("github", { callbackUrl: '/dashboard' })}
+              className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 bg-primary-600 hover:bg-primary-500 text-white font-semibold rounded-xl overflow-hidden transition-all shadow-[0_0_40px_-10px_rgba(56,189,248,0.5)]"
+            >
+              <Github className="w-5 h-5 relative z-10" />
+              <span className="relative z-10 text-lg">Connect GitHub to Start</span>
+              <ChevronRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+              <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+            </button>
+            <button
+              onClick={() => signIn("google", { callbackUrl: '/dashboard' })}
+              className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-100 font-semibold rounded-xl transition-all"
+            >
+              <span className="text-lg font-bold">G</span>
+              <span className="text-lg">Login with Google</span>
+            </button>
+          </div>
         </motion.div>
 
         {/* Features Grid */}

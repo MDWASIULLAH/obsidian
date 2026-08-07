@@ -1,182 +1,165 @@
-import json
-import base64
-import httpx
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from pydantic import BaseModel
+"""GitHub App onboarding and repository discovery."""
 
+from __future__ import annotations
+
+from urllib.parse import urlencode
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import get_settings
+from app.integrations.github_client import get_github_client
 from app.models.database import get_db
+from app.models.github_installation import GitHubInstallation
+from app.models.repository import Repository
 from app.models.user import User
 
 router = APIRouter(prefix="/onboarding", tags=["Onboarding"])
 
-class OnboardingPayload(BaseModel):
-    user_id: str
 
-@router.post("/provision-security-center")
-async def provision_security_center(payload: OnboardingPayload, db: AsyncSession = Depends(get_db)):
-    """
-    Creates the central 'obsidian-security-center' repository on the user's GitHub
-    and commits the initial multiplex agent configuration.
-    """
-    stmt = select(User).where(User.id == payload.user_id)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-    
-    if not user or not user.github_token:
-        raise HTTPException(status_code=400, detail="User or GitHub token not found")
+class InstallUrlRequest(BaseModel):
+    user_id: str | None = None
 
-    token = user.github_token
-    headers = {
-        "Authorization": f"token {token}",
-        "Accept": "application/vnd.github.v3+json"
+
+class SyncInstallationPayload(BaseModel):
+    installation_id: int
+    user_id: str | None = None
+
+
+async def _get_user(db: AsyncSession, user_id: str | None) -> User | None:
+    if not user_id:
+        return None
+    result = await db.execute(select(User).where(User.id == user_id))
+    return result.scalar_one_or_none()
+
+
+@router.post("/github-app/install-url")
+async def get_github_app_install_url(payload: InstallUrlRequest):
+    """Return the GitHub App installation URL for the configured OBSIDIAN app."""
+    settings = get_settings()
+    if not settings.github_app_slug:
+        raise HTTPException(
+            status_code=400,
+            detail="GITHUB_APP_SLUG is required to install the GitHub App",
+        )
+
+    params = {}
+    if payload.user_id:
+        params["state"] = payload.user_id
+
+    query = f"?{urlencode(params)}" if params else ""
+    return {
+        "install_url": f"https://github.com/apps/{settings.github_app_slug}/installations/new{query}",
+        "setup_url": f"{settings.frontend_url.rstrip('/')}/dashboard/setup",
     }
 
-    async with httpx.AsyncClient() as client:
-        # 1. Create Repository
-        repo_name = "obsidian-security-center"
-        create_repo_url = "https://api.github.com/user/repos"
-        repo_data = {
-            "name": repo_name,
-            "description": "OBSIDIAN Autonomous Security Multiplex - Central Command",
-            "private": True,
-            "auto_init": True
-        }
-        
-        repo_res = await client.post(create_repo_url, headers=headers, json=repo_data)
-        
-        if repo_res.status_code not in (201, 422): # 422 usually means it already exists
-            raise HTTPException(status_code=500, detail=f"Failed to create repo: {repo_res.text}")
-        
-        # 2. Upload the GitHub Actions Workflow (The 24/7 Engine trigger)
-        workflow_content = """name: OBSIDIAN Security Multiplex
 
-on:
-  schedule:
-    - cron: '*/5 * * * *' # Runs every 5 minutes (24/7 loop)
-  workflow_dispatch:
+@router.post("/github-app/sync-installation")
+async def sync_github_app_installation(
+    payload: SyncInstallationPayload,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Persist a GitHub App installation and import all authorized repositories.
 
-jobs:
-  multiplex-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-        
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-          
-      - name: Install Dependencies
-        run: pip install httpx
-        
-      - name: Execute Autonomous Multiplex Agent
-        run: python agent.py
-        env:
-          OBSIDIAN_API_URL: "https://your-saas-url.com/api/v1" # To be replaced with production URL
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-"""
-        encoded_workflow = base64.b64encode(workflow_content.encode("utf-8")).decode("utf-8")
-        workflow_url = f"https://api.github.com/repos/{user.username}/{repo_name}/contents/.github/workflows/sentinel-multiplex.yml"
-        
-        await client.put(workflow_url, headers=headers, json={
-            "message": "Initialize OBSIDIAN 24/7 Workflow Engine",
-            "content": encoded_workflow
-        })
+    This is called after GitHub redirects back with `installation_id`.
+    """
+    gh = get_github_client()
+    user = await _get_user(db, payload.user_id)
 
-        # 3. Upload the Autonomous Agent File (agent.py)
-        agent_content = """import os
-import time
-import httpx
-import datetime
-
-API_URL = os.environ.get("OBSIDIAN_API_URL", "http://localhost:8000/api/v1")
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
-
-def run_multiplex():
-    print("Starting OBSIDIAN Autonomous Security Multiplex (Robust Engine)...")
-    
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    
-    # 1. Fetch real repositories
-    repos_url = "https://api.github.com/user/repos?per_page=10&affiliation=owner"
     try:
-        repos_res = httpx.get(repos_url, headers=headers)
-        repos = repos_res.json()
-    except Exception as e:
-        print("Failed to fetch repos:", e)
-        return
+        installation = await gh.get_installation(payload.installation_id)
+        repositories = await gh.list_installation_repositories(payload.installation_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to sync GitHub App installation: {exc}",
+        ) from exc
 
-    findings = []
-    
-    # 2. Perform real basic heuristic scan on repos (e.g. checking for default branch protection or secrets)
-    for repo in repos:
-        repo_name = repo.get("full_name")
-        print(f"Scanning {repo_name}...")
-        
-        # Check 1: Private repo visibility
-        if not repo.get("private"):
-            findings.append({
-                "severity": "high", 
-                "title": f"Repository {repo_name} is public. Consider making it private.",
-                "repo": repo_name
-            })
-            
-        # Check 2: Branch protection (requires admin access, simulation fallback if 403)
-        default_branch = repo.get("default_branch", "main")
-        branch_url = f"https://api.github.com/repos/{repo_name}/branches/{default_branch}/protection"
-        bp_res = httpx.get(branch_url, headers=headers)
-        if bp_res.status_code == 404:
-            findings.append({
-                "severity": "medium",
-                "title": f"No branch protection rules on {default_branch} for {repo_name}",
-                "repo": repo_name
-            })
-            
-        time.sleep(1) # rate limit prevention
+    account = installation.get("account") or {}
+    account_login = account.get("login") or "unknown"
+    account_type = account.get("type") or "User"
 
-    if not findings:
-        findings.append({
-            "severity": "info",
-            "title": "All initial heuristic checks passed across repositories.",
-            "repo": "system"
-        })
+    result = await db.execute(
+        select(GitHubInstallation).where(
+            GitHubInstallation.installation_id == payload.installation_id
+        )
+    )
+    record = result.scalar_one_or_none()
+    if record is None:
+        record = GitHubInstallation(installation_id=payload.installation_id)
+        db.add(record)
 
-    # 3. Beam the live tracking details back to the SaaS Dashboard
-    for finding in findings:
-        payload = {
-            "event_type": "live_scan_finding",
-            "timestamp": datetime.datetime.now().isoformat(),
-            "finding": {
-                "severity": finding["severity"],
-                "title": finding["title"]
-            },
-            "repo": finding.get("repo", "system")
+    record.user_id = user.id if user else None
+    record.account_login = account_login
+    record.account_type = account_type
+    record.target_type = installation.get("target_type")
+    record.repository_selection = installation.get("repository_selection") or "selected"
+    record.permissions = installation.get("permissions") or {}
+    record.events = installation.get("events") or []
+    record.is_active = True
+
+    imported = 0
+    updated = 0
+    for repo_data in repositories:
+        full_name = repo_data.get("full_name")
+        if not full_name:
+            continue
+
+        repo_result = await db.execute(
+            select(Repository).where(Repository.github_id == repo_data.get("id", 0))
+        )
+        repo = repo_result.scalar_one_or_none()
+        if repo is None:
+            repo = Repository(github_id=repo_data.get("id", 0), full_name=full_name)
+            db.add(repo)
+            imported += 1
+        else:
+            updated += 1
+
+        owner = repo_data.get("owner") or {}
+        repo.full_name = full_name
+        repo.name = repo_data.get("name") or full_name.rsplit("/", 1)[-1]
+        repo.owner = owner.get("login") or full_name.split("/", 1)[0]
+        repo.default_branch = repo_data.get("default_branch") or "main"
+        repo.clone_url = repo_data.get("clone_url") or ""
+        repo.description = repo_data.get("description")
+        repo.language = repo_data.get("language")
+        repo.installation_id = payload.installation_id
+        repo.user_id = user.id if user else None
+        repo.is_active = True
+
+    await db.commit()
+
+    return {
+        "status": "synced",
+        "installation_id": payload.installation_id,
+        "account": account_login,
+        "repository_selection": record.repository_selection,
+        "repositories_authorized": len(repositories),
+        "repositories_imported": imported,
+        "repositories_updated": updated,
+    }
+
+
+@router.get("/github-app/status")
+async def github_app_status(user_id: str | None = None, db: AsyncSession = Depends(get_db)):
+    """Return the current user's active GitHub App installations."""
+    query = select(GitHubInstallation).where(GitHubInstallation.is_active.is_(True))
+    if user_id:
+        query = query.where(GitHubInstallation.user_id == user_id)
+    result = await db.execute(query)
+    installs = result.scalars().all()
+    return [
+        {
+            "installation_id": install.installation_id,
+            "account_login": install.account_login,
+            "account_type": install.account_type,
+            "repository_selection": install.repository_selection,
+            "events": install.events,
+            "created_at": install.created_at,
         }
-        
-        print(f"Beaming finding to {API_URL}/webhooks/agent-sync...")
-        try:
-            res = httpx.post(f"{API_URL}/webhooks/agent-sync", json=payload, timeout=10.0)
-            print("Sync complete:", res.status_code)
-        except Exception as e:
-            print("Failed to sync:", str(e))
-            
-        time.sleep(0.5)
-
-if __name__ == "__main__":
-    run_multiplex()
-"""
-        encoded_agent = base64.b64encode(agent_content.encode("utf-8")).decode("utf-8")
-        agent_url = f"https://api.github.com/repos/{user.username}/{repo_name}/contents/agent.py"
-        
-        await client.put(agent_url, headers=headers, json={
-            "message": "Initialize Autonomous Agent File",
-            "content": encoded_agent
-        })
-
-    return {"status": "success", "message": "Security center provisioned successfully", "repo": repo_name}
+        for install in installs
+    ]
