@@ -10,35 +10,106 @@ import {
   Search,
   Activity,
   AlertTriangle,
+  Star,
+  GitFork,
+  Lock,
+  Globe,
+  RefreshCw,
 } from "lucide-react";
-import { api, type Repository } from "@/lib/api";
-import { cn, formatDate, scoreColor } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+
+interface GitHubRepo {
+  id: string;
+  github_id: number;
+  full_name: string;
+  name: string;
+  owner: string;
+  default_branch: string;
+  description: string | null;
+  language: string | null;
+  is_active: boolean;
+  security_score: number;
+  total_scans: number;
+  total_findings: number;
+  total_patches: number;
+  private: boolean;
+  stargazers_count: number;
+  forks_count: number;
+  updated_at: string;
+  created_at: string;
+  html_url: string;
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.04 } },
 };
 
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 };
 
+const langColors: Record<string, string> = {
+  Python: "#3572A5",
+  TypeScript: "#3178c6",
+  JavaScript: "#f1e05a",
+  Go: "#00ADD8",
+  Rust: "#dea584",
+  Java: "#b07219",
+  HCL: "#844FBA",
+  Ruby: "#701516",
+  C: "#555555",
+  "C++": "#f34b7d",
+  "C#": "#178600",
+  PHP: "#4F5D95",
+  Swift: "#F05138",
+  Kotlin: "#A97BFF",
+  Dart: "#00B4AB",
+  HTML: "#e34c26",
+  CSS: "#563d7c",
+  Shell: "#89e051",
+  Jupyter: "#DA5B0B",
+  Vue: "#41b883",
+};
+
+function scoreColor(score: number): string {
+  if (score >= 85) return "text-teal-400";
+  if (score >= 70) return "text-yellow-400";
+  if (score >= 50) return "text-orange-400";
+  return "text-red-400";
+}
+
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays}d ago`;
+  const diffMonths = Math.floor(diffDays / 30);
+  return `${diffMonths}mo ago`;
+}
+
 export default function RepositoriesPage() {
-  const [repos, setRepos] = useState<Repository[]>([]);
+  const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
-  const [newRepo, setNewRepo] = useState("");
-  const [adding, setAdding] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "public" | "private">("all");
 
   useEffect(() => {
     loadRepos();
   }, []);
 
   async function loadRepos() {
+    setLoading(true);
     try {
-      const data = await api.listRepositories();
-      setRepos(data);
+      const res = await fetch("/api/github/repos");
+      const data = await res.json();
+      setRepos(data.repos || []);
     } catch (err) {
       console.error("Failed to load repos:", err);
     } finally {
@@ -46,36 +117,26 @@ export default function RepositoriesPage() {
     }
   }
 
-  async function handleAdd() {
-    if (!newRepo.trim()) return;
-    setAdding(true);
-    try {
-      const repo = await api.addRepository(newRepo.trim());
-      setRepos((prev) => [repo, ...prev]);
-    } catch (err) {
-      console.error("Failed to add repo:", err);
-    } finally {
-      setNewRepo("");
-      setShowAdd(false);
-      setAdding(false);
-    }
-  }
+  const filteredRepos = repos.filter((repo) => {
+    const matchesSearch =
+      !searchQuery ||
+      repo.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (repo.description || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (repo.language || "").toLowerCase().includes(searchQuery.toLowerCase());
 
-  const langColors: Record<string, string> = {
-    Python: "#3572A5",
-    TypeScript: "#3178c6",
-    JavaScript: "#f1e05a",
-    Go: "#00ADD8",
-    Rust: "#dea584",
-    Java: "#b07219",
-    HCL: "#844FBA",
-    Ruby: "#701516",
-  };
+    const matchesFilter =
+      filter === "all" ||
+      (filter === "private" && repo.private) ||
+      (filter === "public" && !repo.private);
+
+    return matchesSearch && matchesFilter;
+  });
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Shield className="w-10 h-10 text-cyber-cyan animate-pulse" />
+      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+        <RefreshCw className="w-8 h-8 text-primary-500 animate-spin" />
+        <p className="text-sm text-gray-400">Loading your GitHub repositories...</p>
       </div>
     );
   }
@@ -88,82 +149,82 @@ export default function RepositoriesPage() {
       className="space-y-6"
     >
       {/* Header */}
-      <motion.div
-        variants={itemVariants}
-        className="flex items-center justify-between"
-      >
+      <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-100">
-            Tracked Repositories
-          </h1>
+          <h1 className="text-xl font-bold text-gray-100">Your Repositories</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {repos.length} repositories under continuous security monitoring
+            {repos.length} repositories from your GitHub account
           </p>
         </div>
         <button
-          onClick={() => setShowAdd(!showAdd)}
-          className="flex items-center gap-2 px-4 py-2 bg-cyber-cyan/10 border border-cyber-cyan/20 text-cyber-cyan rounded-lg text-sm font-medium hover:bg-cyber-cyan/20 transition-all"
+          onClick={loadRepos}
+          className="flex items-center gap-2 px-4 py-2 bg-surface-800 border border-surface-700 text-gray-300 rounded-lg text-sm font-medium hover:bg-surface-700 transition-all"
         >
-          <Plus className="w-4 h-4" />
-          Add Repository
+          <RefreshCw className="w-4 h-4" />
+          Refresh
         </button>
       </motion.div>
 
-      {/* Add Modal */}
-      {showAdd && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="glass-card p-5"
-        >
-          <h3 className="text-sm font-medium text-gray-200 mb-3">
-            Add GitHub Repository
-          </h3>
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={newRepo}
-              onChange={(e) => setNewRepo(e.target.value)}
-              placeholder="owner/repository-name"
-              className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyber-cyan/30"
-            />
+      {/* Search & Filters */}
+      <motion.div variants={itemVariants} className="flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search repositories..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/30"
+          />
+        </div>
+        <div className="flex gap-1 bg-surface-800/50 rounded-lg p-1 border border-surface-700">
+          {(["all", "public", "private"] as const).map((f) => (
             <button
-              onClick={handleAdd}
-              disabled={adding || !newRepo.trim()}
-              className="px-6 py-2.5 bg-gradient-to-r from-cyber-cyan to-cyber-green text-surface-900 rounded-lg text-sm font-semibold disabled:opacity-50 hover:shadow-lg hover:shadow-cyber-cyan/20 transition-all"
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize",
+                filter === f
+                  ? "bg-surface-700 text-gray-100"
+                  : "text-gray-400 hover:text-gray-200"
+              )}
             >
-              {adding ? "Adding..." : "Track"}
+              {f}
             </button>
-          </div>
-        </motion.div>
-      )}
+          ))}
+        </div>
+      </motion.div>
 
       {/* Repository Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {repos.map((repo) => (
+        {filteredRepos.map((repo) => (
           <motion.a
             key={repo.id}
             variants={itemVariants}
-            href={`/dashboard/repositories/${repo.id}`}
+            href={repo.html_url}
+            target="_blank"
+            rel="noopener noreferrer"
             className="glass-card-hover p-5 group block"
           >
             <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <GitBranch className="w-5 h-5 text-gray-500" />
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-200 group-hover:text-cyber-cyan transition-colors">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <GitBranch className="w-5 h-5 text-gray-500 shrink-0" />
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-gray-200 group-hover:text-primary-400 transition-colors truncate">
                     {repo.name}
                   </h3>
                   <p className="text-xs text-gray-500">{repo.owner}</p>
                 </div>
               </div>
-              <div
-                className={cn(
-                  "text-lg font-bold font-mono",
-                  scoreColor(repo.security_score)
+              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                {repo.private ? (
+                  <Lock className="w-3.5 h-3.5 text-yellow-500" />
+                ) : (
+                  <Globe className="w-3.5 h-3.5 text-gray-500" />
                 )}
-              >
-                {repo.security_score}
+                <div className={cn("text-lg font-bold font-mono", scoreColor(repo.security_score))}>
+                  {repo.security_score}
+                </div>
               </div>
             </div>
 
@@ -179,20 +240,22 @@ export default function RepositoriesPage() {
                   <div
                     className="w-2.5 h-2.5 rounded-full"
                     style={{
-                      backgroundColor:
-                        langColors[repo.language] || "#6b7280",
+                      backgroundColor: langColors[repo.language] || "#6b7280",
                     }}
                   />
                   <span>{repo.language}</span>
                 </div>
               )}
               <div className="flex items-center gap-1">
-                <Activity className="w-3 h-3" />
-                <span>{repo.total_scans} scans</span>
+                <Star className="w-3 h-3" />
+                <span>{repo.stargazers_count}</span>
               </div>
               <div className="flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                <span>{repo.total_findings} findings</span>
+                <GitFork className="w-3 h-3" />
+                <span>{repo.forks_count}</span>
+              </div>
+              <div className="ml-auto text-xs text-gray-600">
+                {timeAgo(repo.updated_at)}
               </div>
             </div>
 
@@ -205,6 +268,16 @@ export default function RepositoriesPage() {
           </motion.a>
         ))}
       </div>
+
+      {filteredRepos.length === 0 && !loading && (
+        <div className="text-center py-20">
+          <GitBranch className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400">No repositories found</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {searchQuery ? "Try a different search query" : "Connect your GitHub account to see your repos"}
+          </p>
+        </div>
+      )}
     </motion.div>
   );
 }

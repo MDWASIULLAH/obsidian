@@ -53,6 +53,10 @@ const handler = NextAuth({
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
+        // Store GitHub access token for direct GitHub API calls
+        if (account.access_token) {
+          (token as any).accessToken = account.access_token;
+        }
         try {
           const synced = await syncBackendUser(account, token);
           if (synced?.user_id) {
@@ -70,6 +74,7 @@ const handler = NextAuth({
     async session({ session, token }) {
       (session as any).userId = (token as any).backendUserId;
       (session as any).provider = (token as any).provider;
+      (session as any).accessToken = (token as any).accessToken;
       return session;
     }
   },
