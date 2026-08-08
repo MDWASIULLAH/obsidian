@@ -36,6 +36,7 @@ const navItems = [
   { href: "/dashboard/business-impact", label: "Business Impact", icon: DollarSign },
   { href: "/dashboard/security-timeline", label: "Security Timeline", icon: History },
   { href: "/dashboard/reports", label: "Reports", icon: FileText },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
 export default function DashboardLayout({
@@ -96,7 +97,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;

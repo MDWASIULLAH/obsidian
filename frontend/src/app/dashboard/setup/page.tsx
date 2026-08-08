@@ -92,17 +92,28 @@ export default function SetupPage() {
     return (
       <div className="min-h-screen bg-surface-950 flex flex-col items-center justify-center p-4">
         <div className="glass-card p-10 max-w-lg w-full text-center">
-          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-100 mb-2">Authentication Error</h2>
+          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-100 mb-2">Backend Sync Pending</h2>
           <p className="text-gray-400 mb-6">
-            Your GitHub login was successful, but the backend system failed to synchronize your account. This is usually a temporary issue.
+            Your GitHub login was successful. The backend sync may still be starting up. You can retry or skip to the dashboard.
           </p>
-          <button
-            onClick={() => router.push("/")}
-            className="px-6 py-2.5 rounded-lg text-sm font-medium bg-surface-800 text-gray-200 hover:bg-surface-700 transition-colors"
-          >
-            Return Home and Try Again
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => router.push("/")}
+              className="px-6 py-2.5 rounded-lg text-sm font-medium bg-surface-800 text-gray-200 hover:bg-surface-700 transition-colors"
+            >
+              Return Home
+            </button>
+            <button
+              onClick={() => {
+                localStorage.setItem("obsidian_onboarded", "true");
+                router.push("/dashboard");
+              }}
+              className="px-6 py-2.5 rounded-lg text-sm font-medium bg-primary-500 text-surface-950 hover:bg-primary-400 transition-colors"
+            >
+              Skip to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -168,6 +179,15 @@ export default function SetupPage() {
             className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-surface-800 transition-colors"
           >
             Cancel
+          </button>
+          <button
+            onClick={() => {
+              localStorage.setItem("obsidian_onboarded", "true");
+              router.push("/dashboard");
+            }}
+            className="px-6 py-2.5 rounded-lg text-sm font-medium bg-surface-700 text-gray-200 hover:bg-surface-600 border border-surface-600 transition-colors"
+          >
+            Skip & Go to Dashboard
           </button>
           <button
             onClick={handleInstall}

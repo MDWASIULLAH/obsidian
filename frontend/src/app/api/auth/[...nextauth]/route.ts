@@ -55,14 +55,14 @@ const handler = NextAuth({
       if (account) {
         try {
           const synced = await syncBackendUser(account, token);
-          if (!synced || !synced.user_id) {
-             throw new Error("Backend sync returned no user_id");
+          if (synced?.user_id) {
+            (token as any).backendUserId = synced.user_id;
           }
-          (token as any).backendUserId = synced.user_id;
           (token as any).provider = account.provider;
         } catch (error) {
-          console.error("OBSIDIAN backend auth sync failed", error);
-          throw error;
+          console.error("OBSIDIAN backend auth sync failed (non-blocking)", error);
+          // Don't throw — allow login to proceed without backend sync
+          (token as any).provider = account.provider;
         }
       }
       return token;
