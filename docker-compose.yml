@@ -174,3 +174,6 @@ volumes:
   neo4j_plugins:
   qdrant_data:
   repo_cache:
+
+
+  
