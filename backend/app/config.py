@@ -1,4 +1,4 @@
-"""SENTINEL AI X — Application Configuration."""
+"""OBSIDIAN — Application Configuration."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     )
 
     # ── Application ────────────────────────────────────────────────
-    app_name: str = "sentinel-ai-x"
+    app_name: str = "obsidian"
     app_env: Environment = Environment.DEVELOPMENT
     debug: bool = True
     log_level: str = "INFO"
@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     # ── PostgreSQL ─────────────────────────────────────────────────
     database_url: str = (
         "postgresql+asyncpg://"
-        "sentinel:sentinel_secret@localhost:5432/sentinel"
+        "obsidian:obsidian_secret@localhost:5432/obsidian"
     )
 
     # ── Redis ──────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     # ── Neo4j ──────────────────────────────────────────────────────
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
-    neo4j_password: str = "sentinel_graph"
+    neo4j_password: str = "obsidian_graph"
 
     # ── Additional LLM APIs (Optional) ─────────────────────────────
     gemini_api_key: str = ""
@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     # ── Qdrant ─────────────────────────────────────────────────────
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
-    qdrant_collection_prefix: str = "sentinel"
+    qdrant_collection_prefix: str = "obsidian"
 
     # ── GitHub App ─────────────────────────────────────────────────
     github_app_id: str = ""

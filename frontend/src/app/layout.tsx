@@ -3,7 +3,7 @@ import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 
 export const metadata: Metadata = {
-  title: "SENTINEL AI X — Autonomous Security Engineering",
+  title: "OBSIDIAN — Autonomous Security Engineering",
   description:
     "An Autonomous AI Security Engineering Organization for the Secure Software Development Lifecycle.",
   keywords: [

@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Threat Modeling Agent.
+OBSIDIAN — Threat Modeling Agent.
 
 Performs STRIDE/DREAD threat analysis on code changes,
 generates attack trees, and maps to MITRE ATT&CK.

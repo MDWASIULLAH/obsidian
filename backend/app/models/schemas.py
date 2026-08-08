@@ -1,4 +1,4 @@
-"""SENTINEL AI X — Pydantic request/response schemas."""
+"""OBSIDIAN — Pydantic request/response schemas."""
 
 from __future__ import annotations
 

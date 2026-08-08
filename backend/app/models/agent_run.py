@@ -1,4 +1,4 @@
-"""SENTINEL AI X — Agent execution run model."""
+"""OBSIDIAN — Agent execution run model."""
 
 from __future__ import annotations
 

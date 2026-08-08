@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — FastAPI Application Factory.
+OBSIDIAN — FastAPI Application Factory.
 
 This is the main entry point for the backend API server.
 It configures middleware, mounts routers, and manages the
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle manager."""
 
     logger.info(
-        "Starting SENTINEL AI X",
+        "Starting OBSIDIAN",
         env=settings.app_env.value,
     )
 
@@ -82,7 +82,7 @@ async def lifespan(app: FastAPI):
         app.state.rag = None
 
     logger.info(
-        "SENTINEL AI X ready",
+        "OBSIDIAN ready",
         port=8000,
     )
 
@@ -90,7 +90,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # ── Shutdown ────────────────────────────────────────────────────
-    logger.info("Shutting down SENTINEL AI X")
+    logger.info("Shutting down OBSIDIAN")
 
     if getattr(app.state, "knowledge_graph", None):
         try:
@@ -114,7 +114,7 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
 
     application = FastAPI(
-        title="SENTINEL AI X",
+        title="OBSIDIAN",
         description=(
             "Autonomous AI Security Engineering Organization "
             "for the Secure Software Development Lifecycle."
@@ -208,7 +208,7 @@ def create_app() -> FastAPI:
         return {
             "status": "healthy",
             "version": "1.0.0",
-            "app": "SENTINEL AI X",
+            "app": "OBSIDIAN",
         }
 
     return application

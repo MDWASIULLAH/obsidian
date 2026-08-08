@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Agent Registry & Factory.
+OBSIDIAN — Agent Registry & Factory.
 
 Central registry of all available agents. The orchestrator uses
 this to instantiate and manage agents dynamically.

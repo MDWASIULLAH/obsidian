@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Remaining Specialized Security Agents.
+OBSIDIAN — Remaining Specialized Security Agents.
 
 Each agent follows the BaseAgent contract with specific
 system prompts, output schemas, and analysis logic.

@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Business Impact Engine.
+OBSIDIAN — Business Impact Engine.
 
 Quantifies the financial risk of security vulnerabilities by mapping
 threats to business assets and estimating breach costs, regulatory

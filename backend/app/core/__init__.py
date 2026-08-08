@@ -1,1 +1,1 @@
-"""SENTINEL AI X — Core package."""
+"""OBSIDIAN — Core package."""

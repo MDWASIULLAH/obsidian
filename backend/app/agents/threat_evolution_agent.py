@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Threat Evolution Agent.
+OBSIDIAN — Threat Evolution Agent.
 
 Uses NVIDIA NIM (reasoning tier) to:
   1. Analyse historical threat snapshots for a repository
@@ -25,7 +25,7 @@ from app.config import get_settings
 logger = structlog.get_logger()
 
 _SYSTEM_PROMPT = """
-You are the SENTINEL AI X Threat Evolution Analyst — a Distinguished Security Researcher
+You are the OBSIDIAN Threat Evolution Analyst — a Distinguished Security Researcher
 specialising in predictive vulnerability intelligence.
 
 Your role is to analyse the historical evolution of security threats in a software repository

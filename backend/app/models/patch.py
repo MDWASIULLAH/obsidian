@@ -1,4 +1,4 @@
-"""SENTINEL AI X — Generated patch model."""
+"""OBSIDIAN — Generated patch model."""
 
 from __future__ import annotations
 

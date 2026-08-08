@@ -1,1 +1,1 @@
-"""SENTINEL AI X — Agents package."""
+"""OBSIDIAN — Agents package."""

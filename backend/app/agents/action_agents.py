@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Action Agents.
+OBSIDIAN — Action Agents.
 
 These agents take action based on findings from the security
 scanning agents: simulate attacks, generate patches, generate

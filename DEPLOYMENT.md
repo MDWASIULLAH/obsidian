@@ -1,6 +1,6 @@
-# SENTINEL AI X - Deployment Guide
+# OBSIDIAN - Deployment Guide
 
-This guide provides step-by-step instructions for deploying the SENTINEL AI X platform. 
+This guide provides step-by-step instructions for deploying the OBSIDIAN platform. 
 To operate on free-tier cloud providers, the architecture is split into two parts:
 1. **Frontend:** Deployed on **Vercel** (Free, Serverless).
 2. **Backend:** Deployed on **Render** (Free Web Service tier, using SQLite).
@@ -10,7 +10,7 @@ To operate on free-tier cloud providers, the architecture is split into two part
 ## 1. Prerequisites: GitHub OAuth App
 Before deploying, you must create a GitHub OAuth application for user authentication.
 1. Go to your GitHub Settings -> Developer Settings -> OAuth Apps -> **New OAuth App**.
-2. **Application name:** `Sentinel AI X` (or similar)
+2. **Application name:** `OBSIDIAN` (or similar)
 3. **Homepage URL:** Your Vercel frontend URL (e.g., `https://obsidian-rwnd.vercel.app`)
 4. **Authorization callback URL:** Your Vercel frontend URL + `/api/auth/callback/github` (e.g., `https://obsidian-rwnd.vercel.app/api/auth/callback/github`)
 5. Generate a new **Client Secret**.
@@ -26,7 +26,7 @@ We use Render's "Blueprint" feature to automatically configure the backend based
 1. Log in to your [Render Dashboard](https://dashboard.render.com/).
 2. Click the **New +** button in the top right and select **Blueprint**.
 3. Connect your GitHub repository (`MDWASIULLAH/obsidian`).
-4. Render will automatically read the `render.yaml` file and prepare a Web Service called `sentinel-backend`.
+4. Render will automatically read the `render.yaml` file and prepare a Web Service called `obsidian-backend`.
 5. You will be prompted to enter Environment Variables. Fill them out as follows:
    - `NVIDIA_API_KEY`: *(Leave blank or enter 'placeholder' if required)*
    - `GITHUB_TOKEN`: *(Leave blank or enter 'placeholder' if required)*
@@ -35,7 +35,7 @@ We use Render's "Blueprint" feature to automatically configure the backend based
    - `NEXTAUTH_URL`: Your Vercel frontend URL (e.g., `https://obsidian-rwnd.vercel.app`)
    - `FRONTEND_URL`: Your Vercel frontend URL (e.g., `https://obsidian-rwnd.vercel.app` - **No trailing slash!**)
 6. Click **Apply** or **Save**.
-7. Wait ~3-5 minutes for the deployment to finish. Once it shows a green **Live** badge, copy the URL displayed at the top left (e.g., `https://sentinel-backend-xxxx.onrender.com`). Keep this URL for the next step.
+7. Wait ~3-5 minutes for the deployment to finish. Once it shows a green **Live** badge, copy the URL displayed at the top left (e.g., `https://obsidian-backend-gute.onrender.com`). Keep this URL for the next step.
 
 ---
 
@@ -49,7 +49,7 @@ The frontend is a Next.js application located in the `/frontend` directory.
 3. Import your GitHub repository (`MDWASIULLAH/obsidian`).
 4. **CRITICAL STEP:** In the "Configure Project" screen, look for **Root Directory**. Click **Edit** and type `frontend`. This tells Vercel where the Next.js app is located.
 5. Open the **Environment Variables** dropdown and add the following keys exactly as shown:
-   - `NEXT_PUBLIC_API_URL`: The Render URL you copied in Step 2 (e.g., `https://sentinel-backend-xxxx.onrender.com`)
+   - `NEXT_PUBLIC_API_URL`: The Render URL you copied in Step 2 (e.g., `https://obsidian-backend-gute.onrender.com`)
    - `NEXTAUTH_URL`: Your Vercel frontend URL (e.g., `https://obsidian-rwnd.vercel.app/`)
    - `NEXTAUTH_SECRET`: A random 32-character string (Generate one via `openssl rand -base64 32` or use the one previously generated).
    - `GITHUB_ID`: Your GitHub OAuth App Client ID

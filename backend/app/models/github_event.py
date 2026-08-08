@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — GitHub Event Sourcing Model.
+OBSIDIAN — GitHub Event Sourcing Model.
 
 Every GitHub webhook event is persisted for:
   - Audit trail
@@ -62,7 +62,7 @@ class ProcessingStatus(str, PyEnum):
 
 class GitHubEvent(Base):
     """
-    A single GitHub webhook event received by SENTINEL AI X.
+    A single GitHub webhook event received by OBSIDIAN.
 
     Events are the atomic unit of change in the Digital Twin.
     Each event triggers an incremental graph update and optionally

@@ -1,1 +1,1 @@
-"""SENTINEL AI X — API package."""
+"""OBSIDIAN — API package."""

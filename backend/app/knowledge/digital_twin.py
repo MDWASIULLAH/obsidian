@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — AI Security Digital Twin Service.
+OBSIDIAN — AI Security Digital Twin Service.
 
 Maintains a continuously-updated graph of every security-relevant
 artefact in a repository: branches, commits, files, functions,

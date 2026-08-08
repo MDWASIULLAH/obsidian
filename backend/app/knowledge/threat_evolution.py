@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Threat Evolution Engine.
+OBSIDIAN — Threat Evolution Engine.
 
 Tracks how security threats mutate and evolve over time.
 Stores temporal snapshots in Neo4j and uses NVIDIA NIM to

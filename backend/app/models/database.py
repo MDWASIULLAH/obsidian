@@ -1,4 +1,4 @@
-"""SENTINEL AI X — Database engine, session, and base model."""
+"""OBSIDIAN — Database engine, session, and base model."""
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
 ###############################################################################
-# SENTINEL AI X — Developer Commands
+# OBSIDIAN — Developer Commands
 ###############################################################################
 
 .PHONY: help setup up down logs backend frontend test lint clean db-migrate
@@ -11,7 +11,7 @@ help: ## Show available commands
 # ─────────────────────── Setup ──────────────────────────────────────
 
 setup: ## Initial project setup
-	@echo "📦 Setting up SENTINEL AI X..."
+	@echo "📦 Setting up OBSIDIAN..."
 	cp -n .env.example .env 2>/dev/null || true
 	cd backend && python -m venv .venv && .venv/bin/pip install -r requirements.txt
 	cd frontend && npm install
@@ -21,7 +21,7 @@ setup: ## Initial project setup
 
 up: ## Start all services
 	docker compose up -d
-	@echo "🚀 SENTINEL AI X is running"
+	@echo "🚀 OBSIDIAN is running"
 	@echo "   Frontend:  http://localhost:3000"
 	@echo "   Backend:   http://localhost:8000"
 	@echo "   Neo4j:     http://localhost:7474"

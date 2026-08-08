@@ -51,7 +51,7 @@ const nodeColors: Record<string, string> = {
 
 function generateDemoGraph(): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodeData = [
-    { id: "repo-1", label: "sentinel-org/web-api", type: "Repository" },
+    { id: "repo-1", label: "obsidian-org/web-api", type: "Repository" },
     { id: "file-1", label: "auth/login.py", type: "File" },
     { id: "file-2", label: "api/routes.py", type: "File" },
     { id: "file-3", label: "models/user.py", type: "File" },

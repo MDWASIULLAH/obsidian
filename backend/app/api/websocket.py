@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — WebSocket endpoint for live Digital Twin updates.
+OBSIDIAN — WebSocket endpoint for live Digital Twin updates.
 
 Clients subscribe to a repository's Digital Twin by connecting to:
   WS /api/v1/ws/digital-twin/{repo_id}

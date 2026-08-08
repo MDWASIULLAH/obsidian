@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — LangGraph Pipeline State.
+OBSIDIAN — LangGraph Pipeline State.
 
 Defines the shared state that flows through the multi-agent
 LangGraph pipeline. Each agent reads from and writes to this

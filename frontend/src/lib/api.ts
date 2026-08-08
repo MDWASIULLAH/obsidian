@@ -1,5 +1,5 @@
 /**
- * SENTINEL AI X — API Client
+ * OBSIDIAN — API Client
  *
  * Typed API client for all backend endpoints.
  */

@@ -1,1 +1,1 @@
-"""SENTINEL AI X — Package marker."""
+"""OBSIDIAN — Package marker."""

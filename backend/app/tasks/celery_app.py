@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Celery Application & Task Definitions.
+OBSIDIAN — Celery Application & Task Definitions.
 
 Configures Celery with Redis as broker and defines the
 main pipeline task that triggers the full LangGraph workflow.
@@ -20,7 +20,7 @@ settings = get_settings()
 # ═══════════════════════════════════════════════════════════════════
 
 celery_app = Celery(
-    "sentinel",
+    "obsidian",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
 )

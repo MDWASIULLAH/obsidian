@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — NVIDIA Build Model Router.
+OBSIDIAN — NVIDIA Build Model Router.
 
 Routes LLM calls to the appropriate NVIDIA Build model based on
 capability tier. Supports fallbacks, retries, and model switching

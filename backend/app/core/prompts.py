@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Security-focused prompt templates.
+OBSIDIAN — Security-focused prompt templates.
 
 Every agent uses structured prompts with:
   1. System role defining expertise
@@ -15,7 +15,7 @@ from __future__ import annotations
 # System Prompts by Agent
 # ═══════════════════════════════════════════════════════════════════
 
-ORCHESTRATOR_SYSTEM = """You are the Master Orchestrator of SENTINEL AI X — an autonomous AI security engineering organization.
+ORCHESTRATOR_SYSTEM = """You are the Master Orchestrator of OBSIDIAN — an autonomous AI security engineering organization.
 
 Your role:
 1. Analyze incoming repository changes and determine which security agents to activate

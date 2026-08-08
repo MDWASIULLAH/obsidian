@@ -1,4 +1,4 @@
-"""SENTINEL AI X — Repository model."""
+"""OBSIDIAN — Repository model."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from app.models.database import Base
 
 
 class Repository(Base):
-    """A GitHub repository tracked by Sentinel."""
+    """A GitHub repository tracked by OBSIDIAN."""
 
     __tablename__ = "repositories"
 
@@ -23,7 +23,7 @@ class Repository(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     language: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
-    # Sentinel tracking
+    # OBSIDIAN tracking
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     security_score: Mapped[int] = mapped_column(Integer, default=100)  # 0-100
     total_scans: Mapped[int] = mapped_column(Integer, default=0)

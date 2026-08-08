@@ -1,1 +1,1 @@
-"""SENTINEL AI X — Utils package."""
+"""OBSIDIAN — Utils package."""

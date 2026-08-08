@@ -1,4 +1,4 @@
-"""SENTINEL AI X — Security finding model."""
+"""OBSIDIAN — Security finding model."""
 
 from __future__ import annotations
 

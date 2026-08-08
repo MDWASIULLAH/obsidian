@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ SENTINEL AI X
+# 🔮 OBSIDIAN
 
 ### Autonomous AI Security Engineering Organization
 
@@ -12,22 +12,24 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2-FF6F00?logo=langchain&logoColor=white)](https://langchain.com)
 [![NVIDIA](https://img.shields.io/badge/NVIDIA_NIM-Build_API-76B900?logo=nvidia&logoColor=white)](https://build.nvidia.com)
 <br>
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?logo=vercel&logoColor=white)](https://obsidian-rwnd.vercel.app)
 [![Deployed on Render](https://img.shields.io/badge/Deployed_on-Render-46E3B7?logo=render&logoColor=white)](https://render.com)
+
+[Live Demo](https://obsidian-rwnd.vercel.app) · [API Docs](https://obsidian-backend-gute.onrender.com/docs) · [Deployment Guide](DEPLOYMENT.md)
 
 </div>
 
 ---
 
-## 🎯 What is SENTINEL AI X?
+## 🎯 What is OBSIDIAN?
 
-**SENTINEL AI X** is not a chatbot, not a code review tool, and not a GitHub Copilot clone.
+**OBSIDIAN** is not a chatbot, not a code review tool, and not a GitHub Copilot clone.
 
 It is an **entire autonomous Security Engineering Organization** where **19 specialized AI agents** collaborate to analyze, secure, repair, test, document, and approve software before deployment — all triggered by a single `git push`.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                       SENTINEL AI X PIPELINE                            │
+│                         OBSIDIAN PIPELINE                                │
 │                                                                          │
 │  git push → Webhook → Event Sourcing → Digital Twin Update →             │
 │  Knowledge Graph → 13 Parallel Scan Agents (incl. Threat Evolution) →    │
@@ -37,17 +39,22 @@ It is an **entire autonomous Security Engineering Organization** where **19 spec
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
+---
+
 ## 🏗️ Architecture
 
 ```mermaid
 graph TB
-    subgraph "Frontend"
-        UI[Next.js 15 Dashboard]
+    subgraph "Frontend — Next.js 15"
+        UI[Dashboard — 13 Pages]
+        AUTH[NextAuth GitHub OAuth]
     end
 
-    subgraph "API Layer"
-        API[FastAPI Gateway]
+    subgraph "API Layer — FastAPI"
+        API[REST API Gateway]
         WH[GitHub Webhooks]
+        WS[WebSocket Manager]
+        ONBOARD[Onboarding API]
     end
 
     subgraph "Processing"
@@ -55,8 +62,8 @@ graph TB
         LG[LangGraph Orchestrator]
     end
 
-    subgraph "AI Agents (19)"
-        subgraph "Scan Phase (Parallel)"
+    subgraph "AI Agents — 19 Total"
+        subgraph "Scan Phase — Parallel"
             TM[Threat Modeler]
             CI[Code Intelligence]
             AR[Architecture Review]
@@ -71,7 +78,7 @@ graph TB
             CO[Compliance]
             TE[Threat Evolution]
         end
-        subgraph "Action Phase (Sequential)"
+        subgraph "Action Phase — Sequential"
             ATK[Attack Simulation]
             AP[Auto Patcher]
             RT[Regression Tester]
@@ -88,7 +95,7 @@ graph TB
         TEE[Threat Evolution Engine]
     end
 
-    subgraph "Knowledge"
+    subgraph "Knowledge Layer"
         NEO[Neo4j Graph DB]
         QD[Qdrant Vector DB]
         KB[Security KB: OWASP, MITRE, CWE]
@@ -101,6 +108,7 @@ graph TB
     end
 
     UI --> API
+    AUTH --> API
     WH --> API
     API --> CEL
     CEL --> LG
@@ -114,7 +122,10 @@ graph TB
     LG --> BIE
     LG --> PG
     CEL --> RD
+    WS --> UI
 ```
+
+---
 
 ## 🤖 The 19 Agents
 
@@ -140,6 +151,8 @@ graph TB
 | 18 | **Deployment Approval** | Reasoning | Action | GO/NO-GO decision with confidence scoring |
 | 19 | **Learning Agent** | Reasoning | Action | Learn patterns to improve future runs |
 
+---
+
 ## 🧠 Key Technologies
 
 | Component | Technology | Purpose |
@@ -151,43 +164,65 @@ graph TB
 | **API** | FastAPI | Async REST API with webhook + WebSocket support |
 | **Task Queue** | Celery + Redis | Async event processing and pipeline execution |
 | **Database** | PostgreSQL | Scan results, findings, patches, event sourcing |
-| **Frontend** | Next.js 15 + React 19 | 11-page cybersecurity dashboard with Cytoscape.js |
+| **Frontend** | Next.js 15 + React 19 | 13-page cybersecurity dashboard with Cytoscape.js |
+| **Authentication** | NextAuth.js | GitHub OAuth login with JWT session management |
 | **Graph Viz** | Cytoscape.js | Interactive Digital Twin graph rendering |
 | **Real-time** | WebSocket | Live graph mutation broadcasts |
+
+---
 
 ## 🔮 Advanced Engines
 
 | Engine | Purpose |
 |--------|---------|
-| **AI Security Digital Twin** | Live Neo4j mirror of repository state updated on every GitHub event (22 event types). Visualised with Cytoscape.js. |
+| **AI Security Digital Twin** | Live Neo4j mirror of repository state updated on every GitHub event (22 event types). Visualised with Cytoscape.js in real-time via WebSocket. |
 | **Threat Evolution Engine** | Tracks how threats mutate over time with temporal snapshots. Predicts 30/60/90-day weaponisation probability via NVIDIA NIM. |
 | **Attack Chain Movie** | Discovers multi-step attack paths via graph traversal and replays them cinematically with MITRE kill-chain progression. |
 | **Business Impact Engine** | Dollar-value risk quantification using IBM breach cost methodology, regulatory fines (GDPR/HIPAA/PCI-DSS/SOC2/SOX/CCPA), and downtime-by-industry estimates. |
 | **Security Timeline Engine** | Historical point-in-time snapshots of full repository security posture allowing structural diffing, replay, and posture trend analysis. |
 
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Docker & Docker Compose
-- GitHub Personal Access Token
-- NVIDIA NIM API Key ([build.nvidia.com](https://build.nvidia.com))
+
+- **Docker & Docker Compose** (for full-stack)
+- **Node.js 18+** and **Python 3.12+** (for local development)
+- **GitHub Personal Access Token** (with `read:user`, `user:email`, `repo` scopes)
+- **NVIDIA NIM API Key** — [Get one free at build.nvidia.com](https://build.nvidia.com)
 
 ### 1. Clone & Configure
 
 ```bash
-git clone https://github.com/your-org/sentinel-ai-x.git
-cd sentinel-ai-x
+git clone https://github.com/MDWASIULLAH/obsidian.git
+cd obsidian
 cp .env.example .env
 # Edit .env with your API keys
 ```
 
-### 2. Start All Services
+### 2. Start All Services (Docker)
 
 ```bash
 docker compose up -d
 ```
 
-### 3. Access
+### 3. Local Development (Without Docker)
+
+```bash
+# Backend
+cd backend
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Frontend (in a separate terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+### 4. Access
 
 | Service | URL |
 |---------|-----|
@@ -197,7 +232,7 @@ docker compose up -d
 | **Neo4j Browser** | http://localhost:7474 |
 | **Qdrant UI** | http://localhost:6333/dashboard |
 
-### 4. Register a Repository
+### 5. Register a Repository
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/repositories \
@@ -205,7 +240,7 @@ curl -X POST http://localhost:8000/api/v1/repositories \
   -d '{"full_name": "owner/repo-name"}'
 ```
 
-### 5. Trigger a Manual Scan
+### 6. Trigger a Manual Scan
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/scans \
@@ -213,14 +248,25 @@ curl -X POST http://localhost:8000/api/v1/scans \
   -d '{"repository_id": "<repo-id>"}'
 ```
 
+---
+
 ## 🌍 Production Deployment
 
-For full instructions on deploying this architecture to the cloud on free tiers (Vercel + Render), please refer to the comprehensive [Deployment Guide](DEPLOYMENT.md).
+OBSIDIAN is deployed on free-tier cloud infrastructure:
+
+| Component | Provider | URL |
+|-----------|----------|-----|
+| **Frontend** | Vercel | [obsidian-rwnd.vercel.app](https://obsidian-rwnd.vercel.app) |
+| **Backend** | Render | [obsidian-backend-gute.onrender.com](https://obsidian-backend-gute.onrender.com) |
+
+For full deployment instructions, see the [Deployment Guide](DEPLOYMENT.md).
+
+---
 
 ## 📁 Project Structure
 
 ```
-sentinel-ai-x/
+obsidian/
 ├── backend/
 │   ├── app/
 │   │   ├── agents/                  # All 19 AI agents + orchestrator
@@ -235,9 +281,11 @@ sentinel-ai-x/
 │   │   │   └── action_agents.py     # 6 action agents
 │   │   ├── api/
 │   │   │   ├── router.py            # REST API (30+ endpoints)
+│   │   │   ├── auth.py              # Backend auth sync endpoint
+│   │   │   ├── onboarding.py        # GitHub App onboarding flow
 │   │   │   └── websocket.py         # Digital Twin WebSocket manager
+│   │   ├── config.py                # Settings (all env vars, model config)
 │   │   ├── core/
-│   │   │   ├── config.py            # Settings (incl. GitHub App JWT)
 │   │   │   ├── model_router.py      # NVIDIA NIM multi-tier routing
 │   │   │   └── prompts.py           # 19 agent system prompts
 │   │   ├── integrations/
@@ -252,40 +300,55 @@ sentinel-ai-x/
 │   │   │   └── security_kb.py       # OWASP/MITRE/CWE data
 │   │   ├── models/
 │   │   │   ├── github_event.py      # Event sourcing model
+│   │   │   ├── agent_run.py         # Agent execution run model
+│   │   │   ├── database.py          # Engine, session, base model
 │   │   │   ├── schemas.py           # 40+ Pydantic schemas
 │   │   │   └── ...                  # SQLAlchemy models
 │   │   ├── tasks/
 │   │   │   └── celery_app.py        # Async event + pipeline tasks
+│   │   ├── utils/                   # Utility functions
 │   │   └── main.py                  # FastAPI application factory
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── dashboard/           # 11 dashboard pages
-│   │   │   │   ├── page.tsx              # Overview with gauge
-│   │   │   │   ├── repositories/        # Repo management
-│   │   │   │   ├── scans/              # Scan history
-│   │   │   │   ├── threats/            # Finding explorer
-│   │   │   │   ├── agents/             # Agent grid
-│   │   │   │   ├── graph/              # Knowledge graph viz
-│   │   │   │   ├── digital-twin/       # Cytoscape.js graph + WebSocket
-│   │   │   │   ├── threat-evolution/   # Temporal timeline + predictions
-│   │   │   │   ├── attack-chain/       # Cinematic attack replay
-│   │   │   │   ├── business-impact/    # Dollar-value risk dashboard
-│   │   │   │   └── reports/            # Security reports
-│   │   │   ├── layout.tsx
-│   │   │   └── globals.css
+│   │   │   ├── api/
+│   │   │   │   ├── auth/[...nextauth]/  # NextAuth GitHub OAuth handler
+│   │   │   │   └── github/repos/        # GitHub repos API route
+│   │   │   ├── dashboard/               # 13 dashboard pages
+│   │   │   │   ├── page.tsx              # Overview with security gauge
+│   │   │   │   ├── layout.tsx            # Sidebar navigation layout
+│   │   │   │   ├── setup/               # GitHub App install onboarding
+│   │   │   │   ├── repositories/        # User repo list from GitHub
+│   │   │   │   ├── scans/               # Scan history
+│   │   │   │   ├── threats/             # Finding explorer
+│   │   │   │   ├── agents/              # Agent grid (19 agents)
+│   │   │   │   ├── graph/               # Knowledge graph viz
+│   │   │   │   ├── digital-twin/        # Cytoscape.js graph + WebSocket
+│   │   │   │   ├── threat-evolution/    # Temporal timeline + predictions
+│   │   │   │   ├── security-timeline/   # Snapshot history + diffing
+│   │   │   │   ├── attack-chain/        # Cinematic attack replay
+│   │   │   │   ├── business-impact/     # Dollar-value risk dashboard
+│   │   │   │   ├── reports/             # Security reports
+│   │   │   │   └── settings/            # User settings
+│   │   │   ├── page.tsx              # Landing page
+│   │   │   ├── layout.tsx            # Root layout
+│   │   │   └── globals.css           # Global styles + design tokens
 │   │   └── lib/
-│   │       ├── api.ts            # Typed API client (30+ methods)
-│   │       └── utils.ts          # Utility functions
+│   │       ├── api.ts                # Typed API client (30+ methods)
+│   │       └── utils.ts              # Utility functions
 │   ├── Dockerfile
 │   └── package.json
-├── docker-compose.yml
-├── Makefile
-├── .env.example
-└── README.md
+├── docker-compose.yml                # Full-stack Docker orchestration
+├── Makefile                          # Developer commands
+├── render.yaml                       # Render deployment blueprint
+├── DEPLOYMENT.md                     # Production deployment guide
+├── .env.example                      # Environment variable template
+└── README.md                         # ← You are here
 ```
+
+---
 
 ## 🌐 API Endpoints Reference
 
@@ -297,6 +360,14 @@ All endpoints are prefixed with `/api/v1`.
 |--------|----------|-------------|
 | `GET` | `/health` | Health check with service status |
 | `GET` | `/dashboard/overview` | Aggregate stats (repos, scans, findings, agents) |
+
+### Authentication & Onboarding
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/auth/sync` | Sync NextAuth user to backend (auto-called on login) |
+| `POST` | `/onboarding/github-app/install-url` | Get GitHub App installation URL |
+| `POST` | `/onboarding/github-app/sync-installation` | Sync GitHub App installation |
 
 ### Repositories
 
@@ -358,12 +429,15 @@ All endpoints are prefixed with `/api/v1`.
 |--------|----------|-------------|
 | `POST` | `/business-impact/{repo}` | Compute dollar-value risk assessment |
 
-## 📺 Dashboard Pages (11)
+---
+
+## 📺 Dashboard Pages (13)
 
 | Page | Route | Description |
 |------|-------|-------------|
 | **Overview** | `/dashboard` | Security gauge, finding trends, recent scans |
-| **Repositories** | `/dashboard/repositories` | Register, manage, and monitor GitHub repos |
+| **Setup** | `/dashboard/setup` | GitHub App installation onboarding |
+| **Repositories** | `/dashboard/repositories` | Browse repos from your GitHub account |
 | **Scans** | `/dashboard/scans` | Scan history with status, duration, finding counts |
 | **Threats** | `/dashboard/threats` | Finding explorer with severity filters and patches |
 | **Agents** | `/dashboard/agents` | Agent grid showing 19 agents with tier/phase/status |
@@ -374,6 +448,9 @@ All endpoints are prefixed with `/api/v1`.
 | **Attack Chain** | `/dashboard/attack-chain` | Cinematic attack path replay with kill-chain viz |
 | **Business Impact** | `/dashboard/business-impact` | Dollar-value risk gauge with regulatory exposure |
 | **Reports** | `/dashboard/reports` | Exportable security assessment reports |
+| **Settings** | `/dashboard/settings` | User preferences and configuration |
+
+---
 
 ## 🔗 Supported GitHub Events (22)
 
@@ -388,6 +465,8 @@ The event sourcing layer captures and processes the following webhook event type
 | **Releases & Deployments** | `release`, `deployment`, `deployment_status` |
 | **Collaboration** | `member`, `team_add`, `organization` |
 | **CI/CD** | `workflow_run`, `check_suite` |
+
+---
 
 ## 🗃️ Neo4j Node Types (20+)
 
@@ -407,6 +486,8 @@ The knowledge graph schema includes the following node types with uniqueness con
 | `ThreatSnapshot`, `PredictedTrajectory` | Temporal threat evolution |
 | `AttackChain` | Persisted multi-step attack paths |
 
+---
+
 ## ⚙️ Environment Variables
 
 | Variable | Required | Description |
@@ -420,16 +501,26 @@ The knowledge graph schema includes the following node types with uniqueness con
 | `QDRANT_URL` | ✅ | Qdrant REST endpoint |
 | `GITHUB_TOKEN` | ✅ | GitHub Personal Access Token or App token |
 | `GITHUB_WEBHOOK_SECRET` | ✅ | HMAC secret for webhook verification |
+| `GITHUB_ID` | ✅ | GitHub OAuth App Client ID |
+| `GITHUB_SECRET` | ✅ | GitHub OAuth App Client Secret |
+| `NEXTAUTH_URL` | ✅ | NextAuth callback URL (frontend URL) |
+| `NEXTAUTH_SECRET` | ✅ | NextAuth encryption secret |
 | `GITHUB_APP_ID` | ⬜ | GitHub App ID (for App auth mode) |
 | `GITHUB_PRIVATE_KEY` | ⬜ | GitHub App RSA private key (PEM) |
 | `GITHUB_INSTALLATION_ID` | ⬜ | GitHub App Installation ID |
-| `NEXT_PUBLIC_API_URL` | ⬜ | Frontend API base URL (default: `http://localhost:8000/api/v1`) |
+| `NEXT_PUBLIC_API_URL` | ⬜ | Frontend API base URL (default: `http://localhost:8000`) |
 | `NEXT_PUBLIC_WS_URL` | ⬜ | WebSocket base URL (default: auto-detected) |
+| `GEMINI_API_KEY` | ⬜ | Google Gemini API key (optional fallback) |
+| `GROQ_API_KEY` | ⬜ | Groq API key (optional fallback) |
+| `OPENROUTER_API_KEY` | ⬜ | OpenRouter API key (optional fallback) |
+
+---
 
 ## 🔐 Security Features
 
 - **HMAC-SHA256 webhook verification** — Every GitHub event is cryptographically verified
 - **GitHub App JWT authentication** — Secure installation-level access with RSA key signing
+- **GitHub OAuth login** — Secure user authentication via NextAuth.js with GitHub provider
 - **Event sourcing** — All 22 GitHub event types persisted with `payload_hash` for idempotency and time-travel
 - **AI Security Digital Twin** — Live Neo4j graph mirror updated incrementally on every event via WebSocket
 - **Threat Evolution tracking** — Temporal snapshots with velocity/trend metrics and 30/60/90-day weaponisation prediction
@@ -443,6 +534,27 @@ The knowledge graph schema includes the following node types with uniqueness con
 - **GO/NO-GO** — AI deployment approval with blocking for critical issues
 - **Exploitability rankings** — Threats ranked by `severity × velocity × recency` for prioritised remediation
 
+---
+
+## 🛠️ Developer Commands (Makefile)
+
+```bash
+make setup          # Initial project setup (venv, npm install)
+make up             # Start all Docker services
+make down           # Stop all services
+make backend        # Run backend in dev mode (uvicorn --reload)
+make frontend       # Run frontend in dev mode (npm run dev)
+make celery         # Run Celery worker
+make test           # Run all tests
+make lint           # Run linters (ruff, mypy, eslint)
+make format         # Format code (ruff, prettier)
+make kb-load        # Load security knowledge base into Qdrant
+make kg-init        # Initialize Neo4j knowledge graph schema
+make clean          # Clean build artifacts
+```
+
+---
+
 ## 📄 License
 
 MIT License — Built for the AI Agent Hackathon.
@@ -451,6 +563,8 @@ MIT License — Built for the AI Agent Hackathon.
 
 <div align="center">
 
-**Built with ❤️ using NVIDIA NIM • LangGraph • FastAPI • Neo4j • Qdrant • Next.js**
+**Built with 🔮 using NVIDIA NIM • LangGraph • FastAPI • Neo4j • Qdrant • Next.js**
+
+[GitHub](https://github.com/MDWASIULLAH/obsidian) · [Live Demo](https://obsidian-rwnd.vercel.app) · [API](https://obsidian-backend-gute.onrender.com/docs)
 
 </div>

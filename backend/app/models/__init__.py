@@ -1,4 +1,4 @@
-"""SENTINEL AI X — Models package."""
+"""OBSIDIAN — Models package."""
 
 from app.models.database import Base
 from app.models.user import User

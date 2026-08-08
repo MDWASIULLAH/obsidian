@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Neo4j Security Knowledge Graph.
+OBSIDIAN — Neo4j Security Knowledge Graph.
 
 Manages the full knowledge graph with nodes for repositories,
 files, functions, classes, dependencies, vulnerabilities,

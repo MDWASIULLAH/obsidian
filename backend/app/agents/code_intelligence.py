@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Code Intelligence Agent.
+OBSIDIAN — Code Intelligence Agent.
 
 Deep static analysis on code changes to detect injection
 vulnerabilities, auth bypasses, data flow issues, and more.

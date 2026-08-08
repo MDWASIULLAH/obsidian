@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Base Agent Abstract Class.
+OBSIDIAN — Base Agent Abstract Class.
 
 Every specialized agent inherits from this class. It provides:
   - Unified interface for execution
@@ -123,7 +123,7 @@ class AgentMemory:
 
 class BaseAgent(ABC):
     """
-    Abstract base class for all SENTINEL AI X agents.
+    Abstract base class for all OBSIDIAN agents.
 
     Subclasses must implement:
       - name, purpose, reasoning_strategy, model_tier

@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — LangGraph Master Orchestrator.
+OBSIDIAN — LangGraph Master Orchestrator.
 
 Defines the full security pipeline as a LangGraph StateGraph.
 This is the brain of the system — it routes tasks to agents,
@@ -506,7 +506,7 @@ async def github_feedback_node(state: dict) -> dict:
         severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
     report = (
-        f"# 🛡️ SENTINEL AI X Security Report\n\n"
+        f"# 🛡️ OBSIDIAN Security Report\n\n"
         f"## Security Score: {score}/100\n\n"
         f"## Deployment: {'✅ APPROVED' if approved else '❌ BLOCKED'}\n\n"
         f"## Findings Summary\n"
@@ -555,17 +555,17 @@ async def github_feedback_node(state: dict) -> dict:
                 sha=sha,
                 state=conclusion,
                 description=f"Score: {score}/100 | {'Approved' if approved else 'Blocked'}",
-                context="SENTINEL AI X"
+                context="OBSIDIAN"
             )
 
             # 3. Create PR if patches generated
             if patches and state.get("branch"):
-                pr_title = f"🔐 Auto-Patch: Sentinel AI X Security Fixes ({sha[:7]})"
+                pr_title = f"🔐 Auto-Patch: OBSIDIAN Security Fixes ({sha[:7]})"
                 pr_data = await client.create_pull_request(
                     full_name=repo,
                     title=pr_title,
                     body=report,
-                    head_branch=f"sentinel-patch-{sha[:7]}",  # Assumes branch was pushed by patch agent
+                    head_branch=f"obsidian-patch-{sha[:7]}",  # Assumes branch was pushed by patch agent
                     base_branch=state.get("branch")
                 )
                 
@@ -752,7 +752,7 @@ async def run_security_pipeline(initial_state: dict) -> dict:
                 sha=sha,
                 state="pending",
                 description="OBSIDIAN is analyzing the code...",
-                context="SENTINEL AI X"
+                context="OBSIDIAN"
             )
         except Exception as e:
             logger.warning("Failed to initialize GitHub status checks", error=str(e))

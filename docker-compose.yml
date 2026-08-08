@@ -1,5 +1,5 @@
 ###############################################################################
-# SENTINEL AI X — Production Docker Compose
+# OBSIDIAN — Production Docker Compose
 # Full-stack: Postgres, Redis, Neo4j, Qdrant, Backend, Celery, Frontend
 ###############################################################################
 
@@ -7,18 +7,18 @@ services:
   # ─────────────────────────── PostgreSQL ───────────────────────────
   postgres:
     image: postgres:16-alpine
-    container_name: sentinel-postgres
+    container_name: obsidian-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-sentinel}
-      POSTGRES_USER: ${POSTGRES_USER:-sentinel}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-obsidian}
+      POSTGRES_USER: ${POSTGRES_USER:-obsidian}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-obsidian_secret}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinel}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-obsidian}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,7 +26,7 @@ services:
   # ─────────────────────────── Redis ────────────────────────────────
   redis:
     image: redis:7-alpine
-    container_name: sentinel-redis
+    container_name: obsidian-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
@@ -42,10 +42,10 @@ services:
   # ─────────────────────────── Neo4j ────────────────────────────────
   neo4j:
     image: neo4j:5-community
-    container_name: sentinel-neo4j
+    container_name: obsidian-neo4j
     restart: unless-stopped
     environment:
-      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-sentinel_graph}
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-obsidian_graph}
       NEO4J_PLUGINS: '["apoc"]'
       NEO4J_dbms_memory_heap_max__size: 512M
       NEO4J_dbms_memory_pagecache_size: 256M
@@ -64,7 +64,7 @@ services:
   # ─────────────────────────── Qdrant ───────────────────────────────
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: sentinel-qdrant
+    container_name: obsidian-qdrant
     restart: unless-stopped
     ports:
       - "${QDRANT_HTTP_PORT:-6333}:6333"
@@ -82,13 +82,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sentinel-backend
+    container_name: obsidian-backend
     restart: unless-stopped
     env_file:
       - .env
       - .env.local
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel_secret}@postgres:5432/${POSTGRES_DB:-sentinel}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-obsidian}:${POSTGRES_PASSWORD:-obsidian_secret}@postgres:5432/${POSTGRES_DB:-obsidian}
       - REDIS_URL=redis://redis:6379/0
       - NEO4J_URI=bolt://neo4j:7687
       - QDRANT_URL=http://qdrant:6333
@@ -113,13 +113,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sentinel-celery-worker
+    container_name: obsidian-celery-worker
     restart: unless-stopped
     env_file:
       - .env
       - .env.local
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel_secret}@postgres:5432/${POSTGRES_DB:-sentinel}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-obsidian}:${POSTGRES_PASSWORD:-obsidian_secret}@postgres:5432/${POSTGRES_DB:-obsidian}
       - REDIS_URL=redis://redis:6379/0
       - NEO4J_URI=bolt://neo4j:7687
       - QDRANT_URL=http://qdrant:6333
@@ -137,7 +137,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sentinel-celery-beat
+    container_name: obsidian-celery-beat
     restart: unless-stopped
     env_file:
       - .env
@@ -154,7 +154,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: sentinel-frontend
+    container_name: obsidian-frontend
     restart: unless-stopped
     env_file:
       - .env
@@ -174,6 +174,3 @@ volumes:
   neo4j_plugins:
   qdrant_data:
   repo_cache:
-
-
-  

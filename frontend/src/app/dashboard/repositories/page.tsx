@@ -99,6 +99,7 @@ export default function RepositoriesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "public" | "private">("all");
+  const [needsRelogin, setNeedsRelogin] = useState(false);
 
   useEffect(() => {
     loadRepos();
@@ -109,9 +110,16 @@ export default function RepositoriesPage() {
     try {
       const res = await fetch("/api/github/repos");
       const data = await res.json();
-      setRepos(data.repos || []);
+      if (data.repos && data.repos.length > 0) {
+        setRepos(data.repos);
+        setNeedsRelogin(false);
+      } else {
+        setRepos([]);
+        setNeedsRelogin(true);
+      }
     } catch (err) {
       console.error("Failed to load repos:", err);
+      setNeedsRelogin(true);
     } finally {
       setLoading(false);
     }
@@ -272,10 +280,28 @@ export default function RepositoriesPage() {
       {filteredRepos.length === 0 && !loading && (
         <div className="text-center py-20">
           <GitBranch className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">No repositories found</p>
-          <p className="text-xs text-gray-500 mt-1">
-            {searchQuery ? "Try a different search query" : "Connect your GitHub account to see your repos"}
+          <p className="text-gray-400 text-lg font-medium">
+            {needsRelogin ? "Session needs refresh" : "No repositories found"}
           </p>
+          <p className="text-xs text-gray-500 mt-1 mb-6">
+            {needsRelogin
+              ? "Please sign out and sign back in to grant repository access."
+              : searchQuery
+                ? "Try a different search query"
+                : "No matching repositories"
+            }
+          </p>
+          {needsRelogin && (
+            <button
+              onClick={() => {
+                // Clear session and redirect to sign in
+                window.location.href = "/api/auth/signout?callbackUrl=/";
+              }}
+              className="px-6 py-3 bg-primary-500 text-surface-950 rounded-lg font-semibold hover:bg-primary-400 transition-colors"
+            >
+              Sign Out & Re-Login
+            </button>
+          )}
         </div>
       )}
     </motion.div>

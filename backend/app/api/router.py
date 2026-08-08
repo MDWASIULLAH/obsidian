@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — REST API Router.
+OBSIDIAN — REST API Router.
 
 Mounts all API endpoints under /api/v1.
 """

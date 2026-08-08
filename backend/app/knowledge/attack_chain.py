@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Attack Chain Engine.
+OBSIDIAN — Attack Chain Engine.
 
 Discovers and visualises multi-step attack paths by traversing
 the Neo4j knowledge graph.  Each chain is an ordered sequence of

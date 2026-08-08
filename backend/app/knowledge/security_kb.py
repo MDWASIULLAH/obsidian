@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Security Knowledge Base Loader.
+OBSIDIAN — Security Knowledge Base Loader.
 
 Loads OWASP Top 10, MITRE ATT&CK, CWE, CAPEC, and secure
 coding guidelines into Qdrant for RAG retrieval.

@@ -1,7 +1,7 @@
 services:
   # ─────────────────────────── Backend API (Free Tier) ──────────────────────────
   - type: web
-    name: sentinel-backend
+    name: obsidian-backend
     env: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -12,7 +12,7 @@ services:
       - key: DEBUG
         value: "false"
       - key: DATABASE_URL
-        value: "sqlite+aiosqlite:///./sentinel.db"
+        value: "sqlite+aiosqlite:///./obsidian.db"
       - key: NVIDIA_API_KEY
         sync: false
       - key: GITHUB_TOKEN

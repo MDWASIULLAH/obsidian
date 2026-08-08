@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — Qdrant RAG Pipeline.
+OBSIDIAN — Qdrant RAG Pipeline.
 
 Retrieval-Augmented Generation pipeline using Qdrant for
 semantic search over security knowledge bases (OWASP, MITRE,

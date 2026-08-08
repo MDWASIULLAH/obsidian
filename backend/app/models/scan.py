@@ -1,4 +1,4 @@
-"""SENTINEL AI X — Scan / pipeline execution model."""
+"""OBSIDIAN — Scan / pipeline execution model."""
 
 from __future__ import annotations
 

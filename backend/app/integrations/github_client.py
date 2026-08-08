@@ -1,5 +1,5 @@
 """
-SENTINEL AI X — GitHub Integration Client.
+OBSIDIAN — GitHub Integration Client.
 
 Full GitHub API client supporting:
   - Webhook verification (HMAC-SHA256)
@@ -65,7 +65,7 @@ class GitHubEventData:
 
 
 class GitHubClient:
-    """GitHub API client for SENTINEL AI X."""
+    """GitHub API client for OBSIDIAN."""
 
     def __init__(self, user_token: str | None = None) -> None:
         settings = get_settings()
@@ -701,7 +701,7 @@ class GitHubClient:
         headers = await self._auth_headers()
         async with httpx.AsyncClient() as client:
             payload: dict[str, Any] = {
-                "name": f"SENTINEL AI X: {name}",
+                "name": f"OBSIDIAN: {name}",
                 "head_sha": head_sha,
                 "status": status,
             }
@@ -728,7 +728,7 @@ class GitHubClient:
         sha: str,
         state: str,
         description: str,
-        context: str = "SENTINEL AI X",
+        context: str = "OBSIDIAN",
         target_url: str | None = None,
     ) -> dict:
         """Set a commit status check."""
@@ -977,7 +977,7 @@ def get_github_client() -> GitHubClient:
         """Create or update a check run for an agent."""
         async with httpx.AsyncClient() as client:
             payload: dict[str, Any] = {
-                "name": f"SENTINEL AI X: {name}",
+                "name": f"OBSIDIAN: {name}",
                 "head_sha": head_sha,
                 "status": status,
             }
@@ -1004,7 +1004,7 @@ def get_github_client() -> GitHubClient:
         sha: str,
         state: str,  # error, failure, pending, success
         description: str,
-        context: str = "SENTINEL AI X",
+        context: str = "OBSIDIAN",
         target_url: str | None = None,
     ) -> dict:
         """Set a commit status check."""
