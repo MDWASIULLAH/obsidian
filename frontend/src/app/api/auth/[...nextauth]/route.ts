@@ -34,22 +34,18 @@ async function syncBackendUser(account: any, token: any) {
   return response.json();
 }
 
-const providers: any[] = [];
-
-if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
-  providers.push(
-    GithubProvider({
-      clientId: process.env.GITHUB_ID,
-      clientSecret: process.env.GITHUB_SECRET,
-      authorization: { params: { scope: "read:user user:email repo" } },
-    }),
-  );
-}
-
-
+const providers = [
+  GithubProvider({
+    clientId: process.env.GITHUB_ID || "",
+    clientSecret: process.env.GITHUB_SECRET || "",
+    authorization: { params: { scope: "read:user user:email repo" } },
+  }),
+];
 
 const handler = NextAuth({
   providers,
+  secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev",
+  trustHost: true,
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
