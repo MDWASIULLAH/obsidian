@@ -1,9 +1,0 @@
-{
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "https://obsidian-backend-gute.onrender.com",
-    "NEXTAUTH_URL": "https://obsidian-rwnd.vercel.app"
-  }
-}
