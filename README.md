@@ -11,6 +11,9 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2-FF6F00?logo=langchain&logoColor=white)](https://langchain.com)
 [![NVIDIA](https://img.shields.io/badge/NVIDIA_NIM-Build_API-76B900?logo=nvidia&logoColor=white)](https://build.nvidia.com)
+<br>
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com)
+[![Deployed on Render](https://img.shields.io/badge/Deployed_on-Render-46E3B7?logo=render&logoColor=white)](https://render.com)
 
 </div>
 
@@ -209,6 +212,10 @@ curl -X POST http://localhost:8000/api/v1/scans \
   -H "Content-Type: application/json" \
   -d '{"repository_id": "<repo-id>"}'
 ```
+
+## 🌍 Production Deployment
+
+For full instructions on deploying this architecture to the cloud on free tiers (Vercel + Render), please refer to the comprehensive [Deployment Guide](DEPLOYMENT.md).
 
 ## 📁 Project Structure
 
