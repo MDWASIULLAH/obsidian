@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Shield, CheckCircle, Github, RefreshCw } from "lucide-react";
+import { Shield, CheckCircle, Github, RefreshCw, AlertTriangle } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://obsidian-backend-gute.onrender.com";
 
 export default function SetupPage() {
   const [isWorking, setIsWorking] = useState(false);
@@ -13,11 +13,15 @@ export default function SetupPage() {
   const [syncSummary, setSyncSummary] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  
+  // Enforce session via NextAuth
+  const { data: session, status } = useSession({ required: true });
+  
   const userId = (session as any)?.userId as string | undefined;
   const installationId = searchParams.get("installation_id");
 
   useEffect(() => {
+    // Only attempt sync if we have all needed data and haven't already succeeded
     if (!installationId || !userId || isWorking || syncSummary) return;
 
     const syncInstallation = async () => {
@@ -73,6 +77,38 @@ export default function SetupPage() {
     }
   };
 
+  // 1. Session Loading State
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-surface-950 flex flex-col items-center justify-center p-4">
+        <RefreshCw className="w-8 h-8 text-primary-500 animate-spin" />
+        <p className="mt-4 text-gray-400">Authenticating session...</p>
+      </div>
+    );
+  }
+
+  // 2. Authentication Failure / Missing Backend ID State
+  if (status === "authenticated" && !userId) {
+    return (
+      <div className="min-h-screen bg-surface-950 flex flex-col items-center justify-center p-4">
+        <div className="glass-card p-10 max-w-lg w-full text-center">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-100 mb-2">Authentication Error</h2>
+          <p className="text-gray-400 mb-6">
+            Your GitHub login was successful, but the backend system failed to synchronize your account. This is usually a temporary issue.
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="px-6 py-2.5 rounded-lg text-sm font-medium bg-surface-800 text-gray-200 hover:bg-surface-700 transition-colors"
+          >
+            Return Home and Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 3 & 4 & 5. Ready to Install / Syncing Installation
   return (
     <div className="min-h-screen bg-surface-950 flex flex-col items-center justify-center p-4">
       <div className="glass-card p-10 max-w-2xl w-full">
@@ -112,13 +148,15 @@ export default function SetupPage() {
           </div>
 
           {syncSummary && (
-            <div className="rounded-lg border border-teal-500/30 bg-teal-500/10 px-4 py-3 text-sm text-teal-200">
+            <div className="rounded-lg border border-teal-500/30 bg-teal-500/10 px-4 py-3 text-sm text-teal-200 flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-teal-500 shrink-0" />
               {syncSummary}
             </div>
           )}
 
           {error && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
               {error}
             </div>
           )}
@@ -133,13 +171,18 @@ export default function SetupPage() {
           </button>
           <button
             onClick={handleInstall}
-            disabled={isWorking || !userId}
+            disabled={isWorking || !userId || !!syncSummary}
             className="px-6 py-2.5 rounded-lg text-sm font-medium bg-primary-500 text-surface-950 hover:bg-primary-400 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isWorking ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                Syncing GitHub App...
+                {installationId ? "Syncing Installation..." : "Loading GitHub..."}
+              </>
+            ) : syncSummary ? (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                Installed
               </>
             ) : (
               <>
