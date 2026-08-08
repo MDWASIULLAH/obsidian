@@ -41,16 +41,13 @@ async def lifespan(app: FastAPI):
     from app.knowledge.graph import KnowledgeGraphService
     from app.knowledge.rag import RAGService
 
-    # Create tables in development.
-    # Production should use Alembic migrations.
-    if settings.debug:
-        # Import all models so Base.metadata is fully populated.
-        from app.models import github_event  # noqa: F401
+    # Create tables (use Alembic migrations in production eventually, but for now force create)
+    # Import all models so Base.metadata is fully populated.
+    from app.models import github_event  # noqa: F401
 
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-        logger.info("Database tables created")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("✅ Database tables created")
 
     # ── Initialize Neo4j Knowledge Graph ────────────────────────────
     try:

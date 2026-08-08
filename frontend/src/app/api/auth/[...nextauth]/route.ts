@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import GithubProvider from "next-auth/providers/github";
-import GoogleProvider from "next-auth/providers/google";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -47,18 +46,7 @@ if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
   );
 }
 
-const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ID;
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_SECRET;
 
-if (googleClientId && googleClientSecret) {
-  providers.push(
-    GoogleProvider({
-      clientId: googleClientId,
-      clientSecret: googleClientSecret,
-      authorization: { params: { scope: "openid email profile" } },
-    }),
-  );
-}
 
 const handler = NextAuth({
   providers,
