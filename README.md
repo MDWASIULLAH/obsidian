@@ -29,13 +29,15 @@ It is an **entire autonomous Security Engineering Organization** where **19 spec
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                         OBSIDIAN PIPELINE                                │
+│             n8n MULTI-LEVEL ORCHESTRATION PIPELINE                       │
 │                                                                          │
-│  git push → Webhook → Event Sourcing → Digital Twin Update →             │
-│  Knowledge Graph → 13 Parallel Scan Agents (incl. Threat Evolution) →    │
-│  Attack Chain Discovery → Attack Simulation → Auto-Patch → Test Gen →   │
-│  Business Impact Analysis → Deployment Approval (GO/NO-GO) → Learn      │
+│  [GitHub Webhook Receiver] → [Event Sourcing Router Switch] →            │
+│  [Event Sourcing Normalizer] → [OBSIDIAN Autonomous Agent Node] ─┬─────→ │
+│     (Powered by Llama 3.1 70B & 6 Specialized Security Tools)    │       │
+│                                                                  │       │
+│                                      [Webhook Response Handler] ─┘       │
 │                                                                          │
+│                            [Security Alert Dispatcher (Slack)] ──┘       │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -57,7 +59,8 @@ graph TB
         ONBOARD[Onboarding API]
     end
 
-    subgraph "Processing"
+    subgraph "Orchestration — n8n & Processing"
+        N8N[n8n Workflow Automation]
         CEL[Celery Workers]
         LG[LangGraph Orchestrator]
     end
@@ -109,7 +112,8 @@ graph TB
 
     UI --> API
     AUTH --> API
-    WH --> API
+    WH --> N8N
+    N8N --> API
     API --> CEL
     CEL --> LG
     LG --> TM & CI & AR & DI & SD & IS & CS & CL & AS_ & BL & LS & CO & TE
@@ -158,6 +162,7 @@ graph TB
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
 | **LLM Backend** | NVIDIA NIM (Build API) | Multi-tier model routing (reasoning/code/lightweight) |
+| **Workflow Automation** | n8n | Multi-level orchestration of webhooks, agent triggers, and alerting |
 | **Agent Orchestration** | LangGraph | State machine pipeline with conditional event routing |
 | **Knowledge Graph** | Neo4j | Attack path discovery, digital twin, threat evolution |
 | **RAG Pipeline** | Qdrant | Semantic search over OWASP, MITRE, CWE knowledge bases |
