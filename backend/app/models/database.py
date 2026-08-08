@@ -6,7 +6,11 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, String, func
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.config import get_settings
@@ -20,13 +24,22 @@ def _utcnow() -> datetime:
 
 _settings = get_settings()
 
-engine = create_async_engine(
-    _settings.database_url,
-    echo=_settings.debug,
-    pool_size=20,
-    max_overflow=10,
-    pool_pre_ping=True,
-)
+# SQLite/aiosqlite does not support the PostgreSQL-style connection
+# pool arguments used below. Only apply those options to non-SQLite DBs.
+if _settings.database_url.startswith("sqlite"):
+    engine = create_async_engine(
+        _settings.database_url,
+        echo=_settings.debug,
+    )
+else:
+    engine = create_async_engine(
+        _settings.database_url,
+        echo=_settings.debug,
+        pool_size=20,
+        max_overflow=10,
+        pool_pre_ping=True,
+    )
+
 
 async_session_factory = async_sessionmaker(
     engine,
@@ -50,6 +63,7 @@ async def get_db() -> AsyncSession:  # type: ignore[misc]
 
 # ── Declarative Base ────────────────────────────────────────────────
 
+
 class Base(DeclarativeBase):
     """
     Base model with common fields.
@@ -65,11 +79,13 @@ class Base(DeclarativeBase):
         primary_key=True,
         default=lambda: str(uuid.uuid4()),
     )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=_utcnow,
         server_default=func.now(),
     )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=_utcnow,
