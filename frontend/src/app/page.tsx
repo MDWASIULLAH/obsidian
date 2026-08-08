@@ -18,7 +18,7 @@ export default function LandingPage() {
           <span className="font-bold text-2xl tracking-wider text-white">OBSIDIAN</span>
         </div>
         <button 
-          onClick={() => signIn("github", { callbackUrl: '/dashboard/setup' })}
+          onClick={() => signIn("github", { callbackUrl: '/dashboard' })}
           className="flex items-center gap-2 bg-surface-800 hover:bg-surface-700 border border-surface-600 px-5 py-2 rounded-lg font-medium transition-all"
         >
           <Github className="w-5 h-5" />
@@ -49,7 +49,7 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
-              onClick={() => signIn("github", { callbackUrl: '/dashboard/setup' })}
+              onClick={() => signIn("github", { callbackUrl: '/dashboard' })}
               className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 bg-primary-600 hover:bg-primary-500 text-white font-semibold rounded-xl overflow-hidden transition-all shadow-[0_0_40px_-10px_rgba(56,189,248,0.5)]"
             >
               <Github className="w-5 h-5 relative z-10" />

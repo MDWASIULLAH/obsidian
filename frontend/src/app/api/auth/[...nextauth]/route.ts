@@ -11,7 +11,6 @@ async function syncBackendUser(account: any, token: any) {
     provider,
     provider_account_id: account.providerAccountId,
     github_id: provider === "github" ? account.providerAccountId : undefined,
-    google_id: provider === "google" ? account.providerAccountId : undefined,
     username:
       token.name ||
       token.email ||

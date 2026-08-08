@@ -53,14 +53,7 @@ export default function DashboardLayout({
     },
   });
 
-  const [isOnboarding, setIsOnboarding] = useState(false);
-
-  useEffect(() => {
-    // Check if onboarded, if not redirect to setup page
-    if (session?.user && !localStorage.getItem("obsidian_onboarded") && pathname !== "/dashboard/setup") {
-      router.push("/dashboard/setup");
-    }
-  }, [session, pathname, router]);
+  // Redirect logic to setup page removed as per user request
 
   if (status === "loading") {
     return (
