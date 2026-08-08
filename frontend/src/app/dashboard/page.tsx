@@ -315,7 +315,8 @@ export default function DashboardPage() {
           try {
             const userId = (session as any).userId;
             if (userId) {
-              const res = await fetch(`http://localhost:8000/api/v1/auth/github-stats?user_id=${userId}`);
+              const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+              const res = await fetch(`${API_URL}/api/v1/auth/github-stats?user_id=${userId}`);
               if (res.ok) {
                 const stats = await res.json();
                 dashboard.total_repositories = stats.repo_count;

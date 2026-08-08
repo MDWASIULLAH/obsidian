@@ -89,19 +89,22 @@ def create_app() -> FastAPI:
             "for the Secure Software Development Lifecycle."
         ),
         version="1.0.0",
-        docs_url="/docs" if settings.debug else None,
+        docs_url="/docs",
         redoc_url="/redoc" if settings.debug else None,
         lifespan=lifespan,
     )
 
     # ── CORS ───────────────────────────────────────────────────
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+    ]
+    if settings.frontend_url and settings.frontend_url not in allowed_origins:
+        allowed_origins.append(settings.frontend_url)
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:8000",
-        ],
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
