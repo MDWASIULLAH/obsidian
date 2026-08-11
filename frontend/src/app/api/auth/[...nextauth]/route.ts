@@ -1,7 +1,9 @@
 import NextAuth from "next-auth";
 import GithubProvider from "next-auth/providers/github";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || "https://obsidian-backend-gute.onrender.com"
+).replace(/\/$/, "");
 
 async function syncBackendUser(account: any, token: any) {
   if (!account?.provider || !account?.providerAccountId) return null;
@@ -24,6 +26,7 @@ async function syncBackendUser(account: any, token: any) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -33,8 +36,6 @@ async function syncBackendUser(account: any, token: any) {
   return response.json();
 }
 
-// Support the AUTH_* names currently configured in Vercel, while retaining
-// compatibility with the traditional NextAuth/GitHub variable names.
 const githubClientId = process.env.AUTH_GITHUB_ID || process.env.GITHUB_ID || "";
 const githubClientSecret =
   process.env.AUTH_GITHUB_SECRET || process.env.GITHUB_SECRET || "";
@@ -54,19 +55,13 @@ const handler = NextAuth({
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
-        // Store GitHub access token for direct GitHub API calls
-        if (account.access_token) {
-          (token as any).accessToken = account.access_token;
-        }
+        if (account.access_token) (token as any).accessToken = account.access_token;
         try {
           const synced = await syncBackendUser(account, token);
-          if (synced?.user_id) {
-            (token as any).backendUserId = synced.user_id;
-          }
+          if (synced?.user_id) (token as any).backendUserId = synced.user_id;
           (token as any).provider = account.provider;
         } catch (error) {
           console.error("OBSIDIAN backend auth sync failed (non-blocking)", error);
-          // Don't throw — allow login to proceed without backend sync
           (token as any).provider = account.provider;
         }
       }
@@ -79,8 +74,6 @@ const handler = NextAuth({
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Authenticated users should land on the dashboard overview only when
-      // the callback is the normal login/root flow or the removed setup route.
       if (url.startsWith(baseUrl)) {
         const pathname = new URL(url).pathname;
         if (
@@ -93,7 +86,6 @@ const handler = NextAuth({
         return url;
       }
 
-      // Preserve valid relative internal callback URLs.
       if (url.startsWith("/")) {
         if (url === "/dashboard/setup" || url.startsWith("/dashboard/setup/")) {
           return `${baseUrl}/dashboard`;
@@ -101,13 +93,10 @@ const handler = NextAuth({
         return `${baseUrl}${url}`;
       }
 
-      // External/unsafe callback URLs fall back to the dashboard.
       return `${baseUrl}/dashboard`;
     },
   },
-  pages: {
-    signIn: "/",
-  },
+  pages: { signIn: "/" },
 });
 
 export { handler as GET, handler as POST };
