@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -143,21 +143,18 @@ function Sidebar({ pathname, session, mobile = false, onClose }: { pathname: str
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session, status } = useSession({
-    required: true,
-    onUnauthenticated() {
-      router.push("/");
-    },
-  });
+  const { data: session, status } = useSession();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-surface-950 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full bg-primary-500 animate-ping" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/");
+    }
+  }, [status, router]);
+
+  // Never block the dashboard UI while the NextAuth session request is loading.
+  // The previous implementation rendered a full-screen spinner here, which could
+  // remain visible indefinitely on production when the session endpoint was slow.
 
   const pageLabel = navItems.find((i) => i.href === pathname)?.label || "Dashboard";
 
@@ -193,8 +190,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               <div className="relative hidden md:block">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input type="text" placeholder="Search..." className="pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:border-cyber-cyan/30 focus:ring-1 focus:ring-cyber-cyan/20 w-48 lg:w-64 transition-all" />
+                <input type="text" placeholder="Search..." className="pl-4 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:border-cyber-cyan/30 focus:ring-1 focus:ring-cyber-cyan/20 w-48 lg:w-64 transition-all" />
               </div>
               <Link href="/dashboard/settings" className="p-2 rounded-lg hover:bg-white/5 transition-colors" aria-label="Open settings">
                 <Settings className="w-5 h-5 text-gray-400" />
