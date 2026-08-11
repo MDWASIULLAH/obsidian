@@ -33,17 +33,24 @@ async function syncBackendUser(account: any, token: any) {
   return response.json();
 }
 
+// Support the AUTH_* names currently configured in Vercel, while retaining
+// compatibility with the traditional NextAuth/GitHub variable names.
+const githubClientId = process.env.AUTH_GITHUB_ID || process.env.GITHUB_ID || "";
+const githubClientSecret =
+  process.env.AUTH_GITHUB_SECRET || process.env.GITHUB_SECRET || "";
+const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "";
+
 const providers = [
   GithubProvider({
-    clientId: process.env.GITHUB_ID || "",
-    clientSecret: process.env.GITHUB_SECRET || "",
+    clientId: githubClientId,
+    clientSecret: githubClientSecret,
     authorization: { params: { scope: "read:user user:email repo" } },
   }),
 ];
 
 const handler = NextAuth({
   providers,
-  secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev",
+  secret: authSecret,
   trustHost: true,
   callbacks: {
     async jwt({ token, account }) {
@@ -71,11 +78,11 @@ const handler = NextAuth({
       (session as any).provider = (token as any).provider;
       (session as any).accessToken = (token as any).accessToken;
       return session;
-    }
+    },
   },
   pages: {
-    signIn: '/',
-  }
+    signIn: "/",
+  },
 });
 
 export { handler as GET, handler as POST };
