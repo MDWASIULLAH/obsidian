@@ -52,7 +52,7 @@ async def get_github_app_install_url(payload: InstallUrlRequest):
     query = f"?{urlencode(params)}" if params else ""
     return {
         "install_url": f"https://github.com/apps/{settings.github_app_slug}/installations/new{query}",
-        "setup_url": f"{settings.frontend_url.rstrip('/')}/dashboard/setup",
+        "setup_url": f"{settings.frontend_url.rstrip('/')}/dashboard",
     }
 
 
