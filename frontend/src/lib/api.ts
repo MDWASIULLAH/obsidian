@@ -4,7 +4,9 @@
  * Typed API client for all backend endpoints.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || "https://obsidian-backend-gute.onrender.com"
+).replace(/\/$/, "");
 const isBrowser = typeof window !== "undefined";
 
 // ── Types ─────────────────────────────────────────────────
@@ -117,16 +119,14 @@ export interface Report {
   status: "approved" | "blocked" | "pending";
 }
 
-// ── Digital Twin Types ────────────────────────────────────────────
-
 export interface DigitalTwinNode {
   id: string;
   label: string;
   type: string;
-  health: number;         // 0-1
-  risk: number;           // 0-1
-  confidence: number;     // 0-1
-  security_score: number; // 0-100
+  health: number;
+  risk: number;
+  confidence: number;
+  security_score: number;
   owner: string | null;
   last_modified: string | null;
   properties: Record<string, string>;
@@ -191,8 +191,6 @@ export interface PaginatedEvents {
   total_pages: number;
 }
 
-// ── Threat Evolution Types ─────────────────────────────────────────
-
 export interface ThreatSnapshot {
   id: string;
   severity: string;
@@ -252,8 +250,6 @@ export interface ExploitabilityRanking {
   latest_score: number;
   urgency_score: number;
 }
-
-// ── Attack Chain Types ───────────────────────────────────────────
 
 export interface AttackChainNode {
   id: string;
@@ -326,8 +322,6 @@ export interface BlastRadius {
   max_depth: number;
 }
 
-// ── Business Impact Types ─────────────────────────────────────────
-
 export interface BusinessImpactRequest {
   annual_revenue?: number;
   industry?: string;
@@ -381,8 +375,6 @@ export interface BusinessImpactData {
   regulatory_exposure: RegulatoryExposureItem[];
   risk_rating: string;
 }
-
-// ── Security Timeline Types ───────────────────────────────────────
 
 export interface TimelineSnapshotSummary {
   id: string;
@@ -447,222 +439,99 @@ export interface PostureTrendResponse {
   data_points: PostureTrendDataPoint[];
 }
 
-
-// Fetch Wrapper
-
-async function fetchAPI<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}/api/v1${endpoint}`;
   try {
     const response = await fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", ...options.headers },
       ...options,
     });
 
     if (!response.ok) {
-      throw new Error(`API Error ${response.status}`);
+      const detail = await response.text().catch(() => "");
+      throw new Error(`API ${response.status}${detail ? `: ${detail.slice(0, 200)}` : ""}`);
     }
 
     return await response.json();
   } catch (error: any) {
     throw new Error(
-      `Backend request failed for ${options.method || "GET"} ${endpoint}: ${error.message || error}`,
+      `Backend request failed for ${options.method || "GET"} ${endpoint}: ${error?.message || error}`,
     );
   }
 }
 
-// ── API Export ─────────────────────────────────────────
-
 export const api = {
-  // Dashboard
   getDashboard: () => fetchAPI<DashboardData>("/dashboard"),
-
-  // Repositories
   listRepositories: () => fetchAPI<Repository[]>("/repositories"),
-  addRepository: (full_name: string) =>
-    fetchAPI<Repository>("/repositories", {
-      method: "POST",
-      body: JSON.stringify({ full_name }),
-    }),
+  addRepository: (full_name: string) => fetchAPI<Repository>("/repositories", { method: "POST", body: JSON.stringify({ full_name }) }),
   getRepository: (id: string) => fetchAPI<Repository>(`/repositories/${id}`),
 
-  // Scans
-  listScans: (params?: { repository_id?: string; status?: string; page?: number }) => {
+  listScans: (params?: { repository_id?: string; status?: string; page?: number; page_size?: number }) => {
     const searchParams = new URLSearchParams();
     if (params?.repository_id) searchParams.set("repository_id", params.repository_id);
     if (params?.status) searchParams.set("status", params.status);
     if (params?.page) searchParams.set("page", String(params.page));
-    return fetchAPI<{ items: Scan[]; total: number; page: number; total_pages: number }>(
-      `/scans?${searchParams}`
-    );
+    if (params?.page_size) searchParams.set("page_size", String(params.page_size));
+    return fetchAPI<{ items: Scan[]; total: number; page: number; page_size: number; total_pages: number }>(`/scans?${searchParams}`);
   },
   getScan: (id: string) => fetchAPI<Scan>(`/scans/${id}`),
-  triggerScan: (repository_id: string) =>
-    fetchAPI<Scan>("/scans", {
-      method: "POST",
-      body: JSON.stringify({ repository_id }),
-    }),
+  triggerScan: (repository_id: string) => fetchAPI<Scan>("/scans", { method: "POST", body: JSON.stringify({ repository_id }) }),
 
-  // Findings
-  getFindings: (scanId: string, severity?: string) => {
-    const params = severity ? `?severity=${severity}` : "";
-    return fetchAPI<Finding[]>(`/scans/${scanId}/findings${params}`);
-  },
+  getFindings: (scanId: string, severity?: string) => fetchAPI<Finding[]>(`/scans/${scanId}/findings${severity ? `?severity=${encodeURIComponent(severity)}` : ""}`),
   listFindings: (params?: { severity?: string; page?: number; page_size?: number }) => {
     const searchParams = new URLSearchParams();
     if (params?.severity) searchParams.set("severity", params.severity);
     if (params?.page) searchParams.set("page", String(params.page));
     if (params?.page_size) searchParams.set("page_size", String(params.page_size));
-    return fetchAPI<{ items: Finding[]; total: number; page: number; total_pages: number }>(
-      `/findings?${searchParams.toString()}`,
-    );
+    return fetchAPI<{ items: Finding[]; total: number; page: number; total_pages: number }>(`/findings?${searchParams}`);
   },
 
-  // Agents
   listAgents: () => fetchAPI<AgentInfo[]>("/agents"),
-
-  // Knowledge Graph
   getGraph: (repoId: string) => fetchAPI<GraphData>(`/graph/${repoId}`),
-
-  // Knowledge Search
-  searchKnowledge: (query: string) =>
-    fetchAPI<any[]>(`/knowledge/search?query=${encodeURIComponent(query)}`),
+  searchKnowledge: (query: string) => fetchAPI<any[]>(`/knowledge/search?query=${encodeURIComponent(query)}`),
   getKnowledgeStats: () => fetchAPI<Record<string, any>>("/knowledge/stats"),
-
-  // Reports
   listReports: () => fetchAPI<Report[]>("/reports"),
   generateReport: () => fetchAPI<Report>("/reports", { method: "POST" }),
 
-  // ── Digital Twin ─────────────────────────────────────────────────
+  getDigitalTwin: (repoId: string) => fetchAPI<DigitalTwinData>(`/digital-twin/${repoId}`),
+  getDigitalTwinNode: (repoId: string, nodeId: string) => fetchAPI<TwinNodeDetail>(`/digital-twin/${repoId}/node/${encodeURIComponent(nodeId)}`),
+  getDigitalTwinStats: (repoId: string) => fetchAPI<DigitalTwinStats>(`/digital-twin/${repoId}/stats`),
+  searchDigitalTwin: (repoId: string, query: string, limit = 50) => fetchAPI<{ nodes: DigitalTwinNode[]; total: number }>(`/digital-twin/${repoId}/search?q=${encodeURIComponent(query)}&limit=${limit}`),
 
-  getDigitalTwin: (repoId: string) =>
-    fetchAPI<DigitalTwinData>(`/digital-twin/${repoId}`),
-
-  getDigitalTwinNode: (repoId: string, nodeId: string) =>
-    fetchAPI<TwinNodeDetail>(`/digital-twin/${repoId}/node/${encodeURIComponent(nodeId)}`),
-
-  getDigitalTwinStats: (repoId: string) =>
-    fetchAPI<DigitalTwinStats>(`/digital-twin/${repoId}/stats`),
-
-  searchDigitalTwin: (repoId: string, query: string, limit = 50) =>
-    fetchAPI<{ nodes: DigitalTwinNode[]; total: number }>(
-      `/digital-twin/${repoId}/search?q=${encodeURIComponent(query)}&limit=${limit}`
-    ),
-
-  // ── GitHub Events ─────────────────────────────────────────────────
-
-  listEvents: (page = 1, pageSize = 20) =>
-    fetchAPI<PaginatedEvents>(`/events?page=${page}&page_size=${pageSize}`),
-
+  listEvents: (page = 1, pageSize = 20) => fetchAPI<PaginatedEvents>(`/events?page=${page}&page_size=${pageSize}`),
   listRepoEvents: (repoId: string, page = 1, pageSize = 20, eventType?: string) => {
-    const params = new URLSearchParams({
-      page: String(page),
-      page_size: String(pageSize),
-    });
+    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
     if (eventType) params.set("event_type", eventType);
-    return fetchAPI<PaginatedEvents>(`/events/${repoId}?${params.toString()}`);
+    return fetchAPI<PaginatedEvents>(`/events/${repoId}?${params}`);
   },
 
-  // ── Threat Evolution ───────────────────────────────────────────
+  listThreatTimelines: (repoFullName: string) => fetchAPI<ThreatTimelineSummary[]>(`/threat-evolution/${encodeURIComponent(repoFullName)}/timelines`),
+  getThreatTimeline: (repoFullName: string, threatId: string) => fetchAPI<ThreatTimeline>(`/threat-evolution/${encodeURIComponent(repoFullName)}/timeline/${encodeURIComponent(threatId)}`),
+  getThreatPrediction: (threatId: string) => fetchAPI<ThreatTrajectory>(`/threat-evolution/prediction/${encodeURIComponent(threatId)}`),
+  getExploitabilityRankings: (repoFullName: string, topN = 20) => fetchAPI<ExploitabilityRanking[]>(`/threat-evolution/${encodeURIComponent(repoFullName)}/exploitability?top_n=${topN}`),
 
-  listThreatTimelines: (repoFullName: string) =>
-    fetchAPI<ThreatTimelineSummary[]>(
-      `/threat-evolution/${encodeURIComponent(repoFullName)}/timelines`
-    ),
+  discoverAttackChains: (repoFullName: string, maxDepth = 6, limit = 20) => fetchAPI<AttackChain[]>(`/attack-chains/${encodeURIComponent(repoFullName)}/discover?max_depth=${maxDepth}&limit=${limit}`),
+  listAttackChains: (repoFullName: string, limit = 50) => fetchAPI<AttackChain[]>(`/attack-chains/${encodeURIComponent(repoFullName)}/list?limit=${limit}`),
+  getAttackMovie: (chain: AttackChain) => fetchAPI<AttackMovie>("/attack-chains/movie", { method: "POST", body: JSON.stringify(chain) }),
+  getBlastRadius: (repoFullName: string, nodeId: string, maxDepth = 4) => fetchAPI<BlastRadius>(`/attack-chains/${encodeURIComponent(repoFullName)}/blast-radius/${encodeURIComponent(nodeId)}?max_depth=${maxDepth}`),
 
-  getThreatTimeline: (repoFullName: string, threatId: string) =>
-    fetchAPI<ThreatTimeline>(
-      `/threat-evolution/${encodeURIComponent(repoFullName)}/timeline/${encodeURIComponent(threatId)}`
-    ),
+  computeBusinessImpact: (repoFullName: string, params?: BusinessImpactRequest) => fetchAPI<BusinessImpactData>(`/business-impact/${encodeURIComponent(repoFullName)}`, { method: "POST", body: JSON.stringify(params ?? {}) }),
 
-  getThreatPrediction: (threatId: string) =>
-    fetchAPI<ThreatTrajectory>(
-      `/threat-evolution/prediction/${encodeURIComponent(threatId)}`
-    ),
-
-  getExploitabilityRankings: (repoFullName: string, topN = 20) =>
-    fetchAPI<ExploitabilityRanking[]>(
-      `/threat-evolution/${encodeURIComponent(repoFullName)}/exploitability?top_n=${topN}`
-    ),
-
-  // ── Attack Chains ─────────────────────────────────────────────
-
-  discoverAttackChains: (repoFullName: string, maxDepth = 6, limit = 20) =>
-    fetchAPI<AttackChain[]>(
-      `/attack-chains/${encodeURIComponent(repoFullName)}/discover?max_depth=${maxDepth}&limit=${limit}`
-    ),
-
-  listAttackChains: (repoFullName: string, limit = 50) =>
-    fetchAPI<AttackChain[]>(
-      `/attack-chains/${encodeURIComponent(repoFullName)}/list?limit=${limit}`
-    ),
-
-  getAttackMovie: (chain: AttackChain) =>
-    fetchAPI<AttackMovie>("/attack-chains/movie", {
-      method: "POST",
-      body: JSON.stringify(chain),
-    }),
-
-  getBlastRadius: (repoFullName: string, nodeId: string, maxDepth = 4) =>
-    fetchAPI<BlastRadius>(
-      `/attack-chains/${encodeURIComponent(repoFullName)}/blast-radius/${encodeURIComponent(nodeId)}?max_depth=${maxDepth}`
-    ),
-
-  // ── Business Impact ───────────────────────────────────────────
-
-  computeBusinessImpact: (repoFullName: string, params?: BusinessImpactRequest) =>
-    fetchAPI<BusinessImpactData>(
-      `/business-impact/${encodeURIComponent(repoFullName)}`,
-      {
-        method: "POST",
-        body: JSON.stringify(params ?? {}),
-      }
-    ),
-
-  // ── Security Timeline ─────────────────────────────────────────
-
-  captureSecuritySnapshot: (repoFullName: string, trigger = "manual") =>
-    fetchAPI<TimelineSnapshotDetail>(
-      `/security-timeline/${encodeURIComponent(repoFullName)}/snapshot?trigger=${trigger}`,
-      { method: "POST" }
-    ),
-
+  captureSecuritySnapshot: (repoFullName: string, trigger = "manual") => fetchAPI<TimelineSnapshotDetail>(`/security-timeline/${encodeURIComponent(repoFullName)}/snapshot?trigger=${encodeURIComponent(trigger)}`, { method: "POST" }),
   getSecurityTimeline: (repoFullName: string, limit = 50, since?: string) => {
     let url = `/security-timeline/${encodeURIComponent(repoFullName)}/snapshots?limit=${limit}`;
     if (since) url += `&since=${encodeURIComponent(since)}`;
     return fetchAPI<TimelineSnapshotSummary[]>(url);
   },
-
-  diffSecuritySnapshots: (snapshotA: string, snapshotB: string) =>
-    fetchAPI<TimelineDiffResponse>(
-      `/security-timeline/diff/${encodeURIComponent(snapshotA)}/${encodeURIComponent(snapshotB)}`
-    ),
-
-  getPostureTrend: (repoFullName: string, days = 30) =>
-    fetchAPI<PostureTrendResponse>(
-      `/security-timeline/${encodeURIComponent(repoFullName)}/trend?days=${days}`
-    ),
+  diffSecuritySnapshots: (snapshotA: string, snapshotB: string) => fetchAPI<TimelineDiffResponse>(`/security-timeline/diff/${encodeURIComponent(snapshotA)}/${encodeURIComponent(snapshotB)}`),
+  getPostureTrend: (repoFullName: string, days = 30) => fetchAPI<PostureTrendResponse>(`/security-timeline/${encodeURIComponent(repoFullName)}/trend?days=${days}`),
 };
 
-// ── Digital Twin WebSocket ──────────────────────────────────────────
+const WS_BASE = (
+  process.env.NEXT_PUBLIC_WS_URL || "wss://obsidian-backend-gute.onrender.com"
+).replace(/\/$/, "");
 
-const WS_BASE =
-  process.env.NEXT_PUBLIC_WS_URL ||
-  (typeof window !== "undefined"
-    ? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`
-    : "ws://localhost:8000");
-
-/**
- * Open a WebSocket connection to receive live Digital Twin updates
- * for a given repository.
- *
- * @returns The WebSocket instance. Call `.close()` to disconnect.
- */
 export function createDigitalTwinWebSocket(
   repoId: string,
   onMessage: (data: Record<string, unknown>) => void,
@@ -672,25 +541,19 @@ export function createDigitalTwinWebSocket(
 
   ws.onmessage = (event) => {
     try {
-      const data = JSON.parse(event.data as string);
-      onMessage(data);
+      onMessage(JSON.parse(event.data as string));
     } catch {
-      // non-JSON heartbeat etc.
+      // Ignore heartbeat/non-JSON frames.
     }
   };
 
   ws.onerror = onError ?? ((e) => console.error("Digital Twin WS error", e));
 
-  // Auto ping every 20 s to keep connection alive
   const ping = setInterval(() => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "ping" }));
-    } else {
-      clearInterval(ping);
-    }
+    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "ping" }));
+    else clearInterval(ping);
   }, 20_000);
 
   ws.onclose = () => clearInterval(ping);
-
   return ws;
 }
