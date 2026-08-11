@@ -17,7 +17,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 
-
 logger = structlog.get_logger()
 settings = get_settings()
 
@@ -102,13 +101,18 @@ def create_app() -> FastAPI:
         response.headers["X-Process-Time-Ms"] = f"{(time.perf_counter() - start) * 1000:.1f}"
         return response
 
-    from app.api.router import api_router
     from app.api.auth import router as auth_router
     from app.api.onboarding import router as onboarding_router
+    from app.api.scan_override import router as scan_override_router
+    from app.api.router import api_router
     from app.api.live_scan import router as live_scan_router
 
     application.include_router(auth_router, prefix="/api/v1")
     application.include_router(onboarding_router, prefix="/api/v1")
+
+    # Put the compatibility POST /scans route before the legacy router so
+    # existing frontend callers automatically use the real repository scan.
+    application.include_router(scan_override_router, prefix="/api/v1")
     application.include_router(api_router, prefix="/api/v1")
     application.include_router(live_scan_router, prefix="/api/v1")
 
