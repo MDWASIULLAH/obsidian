@@ -1,360 +1,358 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Network,
-  ZoomIn,
-  ZoomOut,
-  Maximize,
-  RotateCcw,
-  Shield,
-} from "lucide-react";
+import { RotateCcw, ZoomIn, ZoomOut, Activity, RefreshCw } from "lucide-react";
 
-// ── Types ────────────────────────────────────────────────
-
-interface GraphNode {
+type ApiNode = {
   id: string;
   label: string;
   type: string;
-  x: number;
-  y: number;
-  color: string;
-  radius: number;
-}
+  properties: Record<string, unknown>;
+};
 
-interface GraphEdge {
+type ApiEdge = {
   source: string;
   target: string;
   relationship: string;
-}
-
-// ── Color Map ────────────────────────────────────────────
-
-const nodeColors: Record<string, string> = {
-  Repository: "#00f0ff",
-  File: "#3b82f6",
-  Function: "#8b5cf6",
-  Class: "#6366f1",
-  Dependency: "#ff6600",
-  Vulnerability: "#ff3366",
-  Threat: "#ec4899",
-  Secret: "#fbbf24",
-  Agent: "#00ff88",
-  Fix: "#10b981",
-  Test: "#a855f7",
-  CloudResource: "#06b6d4",
-  Container: "#14b8a6",
 };
 
-// ── Demo Graph Data ──────────────────────────────────────
+type LiveGraph = {
+  repository_id: string;
+  repository_name: string;
+  nodes: ApiNode[];
+  edges: ApiEdge[];
+  meta: {
+    generated_at: string;
+    active_scans: number;
+    finding_count: number;
+  };
+};
 
-function generateDemoGraph(): { nodes: GraphNode[]; edges: GraphEdge[] } {
-  const nodeData = [
-    { id: "repo-1", label: "obsidian-org/web-api", type: "Repository" },
-    { id: "file-1", label: "auth/login.py", type: "File" },
-    { id: "file-2", label: "api/routes.py", type: "File" },
-    { id: "file-3", label: "models/user.py", type: "File" },
-    { id: "file-4", label: "config/settings.py", type: "File" },
-    { id: "file-5", label: "Dockerfile", type: "File" },
-    { id: "file-6", label: "terraform/main.tf", type: "File" },
-    { id: "dep-1", label: "fastapi==0.109.0", type: "Dependency" },
-    { id: "dep-2", label: "sqlalchemy==2.0.25", type: "Dependency" },
-    { id: "dep-3", label: "pyjwt==2.8.0", type: "Dependency" },
-    { id: "dep-4", label: "boto3==1.34.0", type: "Dependency" },
-    { id: "vuln-1", label: "SQL Injection (CWE-89)", type: "Vulnerability" },
-    { id: "vuln-2", label: "Hardcoded Secret (CWE-798)", type: "Vulnerability" },
-    { id: "vuln-3", label: "Missing AuthZ (CWE-862)", type: "Vulnerability" },
-    { id: "threat-1", label: "STRIDE: Elevation", type: "Threat" },
-    { id: "threat-2", label: "STRIDE: Info Disclosure", type: "Threat" },
-    { id: "agent-1", label: "Code Intelligence", type: "Agent" },
-    { id: "agent-2", label: "Secrets Detection", type: "Agent" },
-    { id: "agent-3", label: "API Security", type: "Agent" },
-    { id: "fix-1", label: "Patch: Parameterized Query", type: "Fix" },
-    { id: "fix-2", label: "Patch: Env Variables", type: "Fix" },
-  ];
+type RenderNode = ApiNode & { x: number; y: number; vx: number; vy: number };
 
-  // Position nodes in a force-directed-like layout
-  const cx = 500, cy = 350;
-  const nodes: GraphNode[] = nodeData.map((n, i) => {
-    const angle = (i / nodeData.length) * Math.PI * 2;
-    const typeRadii: Record<string, number> = {
-      Repository: 0,
-      File: 120,
-      Dependency: 200,
-      Vulnerability: 250,
-      Threat: 280,
-      Agent: 310,
-      Fix: 330,
-    };
-    const r = typeRadii[n.type] || 180;
-    const jitter = (Math.random() - 0.5) * 60;
-    return {
-      ...n,
-      x: cx + Math.cos(angle) * r + jitter,
-      y: cy + Math.sin(angle) * r + jitter,
-      color: nodeColors[n.type] || "#6b7280",
-      radius: n.type === "Repository" ? 20 : n.type === "Vulnerability" ? 14 : 10,
-    };
-  });
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  const edges: GraphEdge[] = [
-    { source: "repo-1", target: "file-1", relationship: "CONTAINS" },
-    { source: "repo-1", target: "file-2", relationship: "CONTAINS" },
-    { source: "repo-1", target: "file-3", relationship: "CONTAINS" },
-    { source: "repo-1", target: "file-4", relationship: "CONTAINS" },
-    { source: "repo-1", target: "file-5", relationship: "CONTAINS" },
-    { source: "repo-1", target: "file-6", relationship: "CONTAINS" },
-    { source: "repo-1", target: "dep-1", relationship: "DEPENDS_ON" },
-    { source: "repo-1", target: "dep-2", relationship: "DEPENDS_ON" },
-    { source: "repo-1", target: "dep-3", relationship: "DEPENDS_ON" },
-    { source: "repo-1", target: "dep-4", relationship: "DEPENDS_ON" },
-    { source: "file-1", target: "vuln-1", relationship: "HAS_VULNERABILITY" },
-    { source: "file-4", target: "vuln-2", relationship: "HAS_VULNERABILITY" },
-    { source: "file-2", target: "vuln-3", relationship: "HAS_VULNERABILITY" },
-    { source: "vuln-1", target: "threat-1", relationship: "ENABLES" },
-    { source: "vuln-2", target: "threat-2", relationship: "ENABLES" },
-    { source: "agent-1", target: "vuln-1", relationship: "DISCOVERED" },
-    { source: "agent-2", target: "vuln-2", relationship: "DISCOVERED" },
-    { source: "agent-3", target: "vuln-3", relationship: "DISCOVERED" },
-    { source: "vuln-1", target: "fix-1", relationship: "FIXED_BY" },
-    { source: "vuln-2", target: "fix-2", relationship: "FIXED_BY" },
-  ];
+const NODE_COLORS: Record<string, string> = {
+  Repository: "#00f0ff",
+  Scan: "#8b5cf6",
+  File: "#3b82f6",
+  Vulnerability: "#ff3366",
+  Agent: "#00ff88",
+};
 
-  return { nodes, edges };
+const FALLBACK_COLOR = "#94a3b8";
+
+function colorFor(type: string) {
+  return NODE_COLORS[type] || FALLBACK_COLOR;
 }
 
-// ── Graph Canvas Component ───────────────────────────────
+function makeInitialPositions(nodes: ApiNode[], width: number, height: number): RenderNode[] {
+  const cx = width / 2;
+  const cy = height / 2;
+  const radius = Math.max(80, Math.min(width, height) * 0.28);
+
+  return nodes.map((node, index) => {
+    const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2;
+    const r = node.type === "Repository" ? 0 : radius + (index % 3) * 35;
+    return {
+      ...node,
+      x: cx + Math.cos(angle) * r,
+      y: cy + Math.sin(angle) * r,
+      vx: 0,
+      vy: 0,
+    };
+  });
+}
 
 export default function GraphPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [graphData] = useState(generateDemoGraph);
-  const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const dataRef = useRef<LiveGraph | null>(null);
+  const nodesRef = useRef<RenderNode[]>([]);
+  const frameRef = useRef<number | null>(null);
+  const transformRef = useRef({ zoom: 1, x: 0, y: 0 });
+  const dragRef = useRef({ active: false, x: 0, y: 0 });
+
+  const [repositories, setRepositories] = useState<Array<{ id: string; full_name: string }>>([]);
+  const [repoId, setRepoId] = useState<string>("");
+  const [data, setData] = useState<LiveGraph | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+  const [hovered, setHovered] = useState<RenderNode | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const loadRepositories = useCallback(async () => {
+    const response = await fetch(`${API_BASE}/api/v1/repositories`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Repository API returned ${response.status}`);
+    const items = await response.json();
+    const normalized = items.map((item: any) => ({ id: item.id, full_name: item.full_name }));
+    setRepositories(normalized);
+    if (!repoId && normalized[0]?.id) setRepoId(normalized[0].id);
+  }, [repoId]);
+
+  const loadGraph = useCallback(async () => {
+    if (!repoId) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/live-graph/${repoId}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Live graph API returned ${response.status}`);
+      const next: LiveGraph = await response.json();
+      dataRef.current = next;
+      setData(next);
+      setLastUpdated(new Date());
+      setError("");
+
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const previous = new Map(nodesRef.current.map((node) => [node.id, node]));
+        nodesRef.current = next.nodes.map((node) => {
+          const old = previous.get(node.id);
+          return old
+            ? { ...node, x: old.x, y: old.y, vx: old.vx, vy: old.vy }
+            : makeInitialPositions([node], canvas.width, canvas.height)[0];
+        });
+      }
+    } catch (err: any) {
+      setError(err?.message || "Unable to load live graph");
+    } finally {
+      setLoading(false);
+    }
+  }, [repoId]);
+
+  useEffect(() => {
+    loadRepositories().catch((err) => {
+      setLoading(false);
+      setError(err?.message || "Unable to load repositories");
+    });
+  }, [loadRepositories]);
+
+  useEffect(() => {
+    if (!repoId) return;
+    loadGraph();
+    const timer = window.setInterval(loadGraph, data?.meta.active_scans ? 1500 : 3000);
+    return () => window.clearInterval(timer);
+  }, [repoId, loadGraph, data?.meta.active_scans]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const graph = dataRef.current;
+    if (!canvas || !graph) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const w = canvas.width;
-    const h = canvas.height;
+    const width = canvas.width;
+    const height = canvas.height;
+    const nodes = nodesRef.current;
+    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
 
-    ctx.clearRect(0, 0, w, h);
+    // Lightweight force simulation driven only by the real graph nodes/edges.
+    for (const node of nodes) {
+      let fx = 0;
+      let fy = 0;
+      for (const other of nodes) {
+        if (other.id === node.id) continue;
+        const dx = node.x - other.x;
+        const dy = node.y - other.y;
+        const d2 = Math.max(dx * dx + dy * dy, 100);
+        if (d2 < 180000) {
+          const force = 1800 / d2;
+          fx += dx * force;
+          fy += dy * force;
+        }
+      }
+
+      for (const edge of graph.edges) {
+        if (edge.source !== node.id && edge.target !== node.id) continue;
+        const otherId = edge.source === node.id ? edge.target : edge.source;
+        const other = nodeMap.get(otherId);
+        if (!other) continue;
+        const dx = other.x - node.x;
+        const dy = other.y - node.y;
+        fx += dx * 0.0018;
+        fy += dy * 0.0018;
+      }
+
+      if (node.type === "Repository") {
+        fx += (width / 2 - node.x) * 0.012;
+        fy += (height / 2 - node.y) * 0.012;
+      } else {
+        fx += (width / 2 - node.x) * 0.0008;
+        fy += (height / 2 - node.y) * 0.0008;
+      }
+
+      node.vx = (node.vx + fx) * 0.92;
+      node.vy = (node.vy + fy) * 0.92;
+      node.x += node.vx;
+      node.y += node.vy;
+      node.x = Math.max(35, Math.min(width - 35, node.x));
+      node.y = Math.max(35, Math.min(height - 35, node.y));
+    }
+
+    const { zoom, x: ox, y: oy } = transformRef.current;
+    ctx.clearRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(offset.x, offset.y);
+    ctx.translate(ox, oy);
     ctx.scale(zoom, zoom);
 
-    // Draw edges
-    graphData.edges.forEach((edge) => {
-      const src = graphData.nodes.find((n) => n.id === edge.source);
-      const tgt = graphData.nodes.find((n) => n.id === edge.target);
-      if (!src || !tgt) return;
-
+    // Connections from the real API response.
+    for (const edge of graph.edges) {
+      const source = nodeMap.get(edge.source);
+      const target = nodeMap.get(edge.target);
+      if (!source || !target) continue;
       ctx.beginPath();
-      ctx.moveTo(src.x, src.y);
-      ctx.lineTo(tgt.x, tgt.y);
-      ctx.strokeStyle =
-        edge.relationship === "HAS_VULNERABILITY"
-          ? "rgba(255, 51, 102, 0.3)"
-          : edge.relationship === "FIXED_BY"
-          ? "rgba(0, 255, 136, 0.3)"
-          : edge.relationship === "DISCOVERED"
-          ? "rgba(0, 240, 255, 0.2)"
-          : "rgba(100, 116, 139, 0.15)";
+      ctx.moveTo(source.x, source.y);
+      ctx.lineTo(target.x, target.y);
+      ctx.strokeStyle = edge.relationship === "HAS_VULNERABILITY"
+        ? "rgba(255,51,102,.48)"
+        : "rgba(100,116,139,.22)";
       ctx.lineWidth = edge.relationship === "HAS_VULNERABILITY" ? 2 : 1;
       ctx.stroke();
-    });
+    }
 
-    // Draw nodes
-    graphData.nodes.forEach((node) => {
-      // Glow
-      const gradient = ctx.createRadialGradient(
-        node.x, node.y, 0,
-        node.x, node.y, node.radius * 2.5
-      );
-      gradient.addColorStop(0, node.color + "30");
-      gradient.addColorStop(1, "transparent");
-      ctx.fillStyle = gradient;
+    const pulse = 1 + Math.sin(performance.now() / 500) * 0.08;
+    for (const node of nodes) {
+      const color = colorFor(node.type);
+      const radius = node.type === "Repository" ? 13 : node.type === "Vulnerability" ? 10 : 7;
+
+      const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius * 3.5 * pulse);
+      glow.addColorStop(0, `${color}44`);
+      glow.addColorStop(1, "transparent");
+      ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(node.x, node.y, node.radius * 2.5, 0, Math.PI * 2);
+      ctx.arc(node.x, node.y, radius * 3.5 * pulse, 0, Math.PI * 2);
       ctx.fill();
 
-      // Node circle
       ctx.beginPath();
-      ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-      ctx.fillStyle = node.color + "20";
+      ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = `${color}20`;
       ctx.fill();
-      ctx.strokeStyle = node.color;
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = node.type === "Vulnerability" ? 2 : 1.5;
       ctx.stroke();
 
-      // Label
-      ctx.font = "10px Inter, sans-serif";
-      ctx.fillStyle = "#94a3b8";
+      ctx.font = "11px Inter, sans-serif";
+      ctx.fillStyle = "#cbd5e1";
       ctx.textAlign = "center";
-      ctx.fillText(
-        node.label.length > 24 ? node.label.slice(0, 22) + "…" : node.label,
-        node.x,
-        node.y + node.radius + 14
-      );
-    });
+      const label = node.label.length > 30 ? `${node.label.slice(0, 28)}…` : node.label;
+      ctx.fillText(label, node.x, node.y + radius + 15);
+    }
 
     ctx.restore();
-  }, [graphData, zoom, offset]);
+    frameRef.current = requestAnimationFrame(draw);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
 
     const resize = () => {
-      const parent = canvas.parentElement;
-      if (!parent) return;
-      canvas.width = parent.clientWidth;
-      canvas.height = parent.clientHeight;
-      draw();
+      const dpr = window.devicePixelRatio || 1;
+      const rect = parent.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+      ctxScale(canvas, dpr);
     };
 
     resize();
     window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
+    frameRef.current = requestAnimationFrame(draw);
+    return () => {
+      window.removeEventListener("resize", resize);
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
   }, [draw]);
 
-  useEffect(() => {
-    draw();
-  }, [draw]);
+  function ctxScale(canvas: HTMLCanvasElement, dpr: number) {
+    const ctx = canvas.getContext("2d");
+    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
 
-  // Mouse interaction
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const pointerNode = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const mx = (e.clientX - rect.left - offset.x) / zoom;
-    const my = (e.clientY - rect.top - offset.y) / zoom;
-
-    const found = graphData.nodes.find(
-      (n) => Math.hypot(n.x - mx, n.y - my) < n.radius + 5
-    );
-    setHoveredNode(found || null);
-    canvas.style.cursor = found ? "pointer" : "default";
+    const { zoom, x, y } = transformRef.current;
+    const mx = (event.clientX - rect.left - x) / zoom;
+    const my = (event.clientY - rect.top - y) / zoom;
+    const found = nodesRef.current.find((node) => Math.hypot(node.x - mx, node.y - my) < 18);
+    setHovered(found || null);
   };
 
-  // Drag
-  const [dragging, setDragging] = useState(false);
-  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
+  const zoomBy = (amount: number) => {
+    transformRef.current.zoom = Math.max(0.35, Math.min(3, transformRef.current.zoom + amount));
+  };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setDragging(true);
-    setLastPos({ x: e.clientX, y: e.clientY });
+  const reset = () => {
+    transformRef.current = { zoom: 1, x: 0, y: 0 };
+    const canvas = canvasRef.current;
+    if (canvas && dataRef.current) {
+      nodesRef.current = makeInitialPositions(dataRef.current.nodes, canvas.clientWidth, canvas.clientHeight);
+    }
   };
-  const handleMouseUp = () => setDragging(false);
-  const handleDrag = (e: React.MouseEvent) => {
-    if (!dragging) return;
-    setOffset((prev) => ({
-      x: prev.x + (e.clientX - lastPos.x),
-      y: prev.y + (e.clientY - lastPos.y),
-    }));
-    setLastPos({ x: e.clientX, y: e.clientY });
-  };
+
+  const active = Boolean(data?.meta.active_scans);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-4"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-100">Knowledge Graph</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Security knowledge graph — files, vulnerabilities, threats, agents,
-            and patches
-          </p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold text-gray-100">Knowledge Graph</h1>
+            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold ${active ? "bg-cyan-400/10 text-cyan-300" : "bg-emerald-400/10 text-emerald-300"}`}>
+              <Activity className="w-3 h-3" />
+              {active ? "LIVE SCAN" : "LIVE DATA"}
+            </span>
+          </div>
+          <p className="text-sm text-gray-500 mt-1">Real repository scans, findings, files and agents. No demo nodes.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setZoom((z) => Math.min(z + 0.2, 3))}
-            className="p-2 rounded-lg glass-card hover:bg-white/5 transition-colors"
-          >
-            <ZoomIn className="w-4 h-4 text-gray-400" />
-          </button>
-          <button
-            onClick={() => setZoom((z) => Math.max(z - 0.2, 0.3))}
-            className="p-2 rounded-lg glass-card hover:bg-white/5 transition-colors"
-          >
-            <ZoomOut className="w-4 h-4 text-gray-400" />
-          </button>
-          <button
-            onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }); }}
-            className="p-2 rounded-lg glass-card hover:bg-white/5 transition-colors"
-          >
-            <RotateCcw className="w-4 h-4 text-gray-400" />
-          </button>
+          {repositories.length > 0 && (
+            <select value={repoId} onChange={(e) => setRepoId(e.target.value)} className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 max-w-[240px]">
+              {repositories.map((repo) => <option key={repo.id} value={repo.id}>{repo.full_name}</option>)}
+            </select>
+          )}
+          <button onClick={loadGraph} className="p-2 rounded-lg glass-card hover:bg-white/5" title="Refresh live graph"><RefreshCw className="w-4 h-4 text-gray-400" /></button>
+          <button onClick={() => zoomBy(0.2)} className="p-2 rounded-lg glass-card hover:bg-white/5"><ZoomIn className="w-4 h-4 text-gray-400" /></button>
+          <button onClick={() => zoomBy(-0.2)} className="p-2 rounded-lg glass-card hover:bg-white/5"><ZoomOut className="w-4 h-4 text-gray-400" /></button>
+          <button onClick={reset} className="p-2 rounded-lg glass-card hover:bg-white/5"><RotateCcw className="w-4 h-4 text-gray-400" /></button>
         </div>
       </div>
 
-      {/* Legend */}
       <div className="glass-card p-3 flex flex-wrap gap-4">
-        {Object.entries(nodeColors)
-          .filter(([t]) =>
-            ["Repository", "File", "Dependency", "Vulnerability", "Threat", "Agent", "Fix"].includes(t)
-          )
-          .map(([type, color]) => (
-            <div key={type} className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{
-                  backgroundColor: color,
-                  boxShadow: `0 0 6px ${color}50`,
-                }}
-              />
-              <span className="text-xs text-gray-400">{type}</span>
-            </div>
-          ))}
+        {Object.entries(NODE_COLORS).map(([type, color]) => (
+          <div key={type} className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />
+            <span className="text-xs text-gray-400">{type}</span>
+          </div>
+        ))}
+        <span className="text-xs text-gray-600 ml-auto">{data?.nodes.length || 0} nodes · {data?.edges.length || 0} edges · {data?.meta.finding_count || 0} findings</span>
       </div>
 
-      {/* Canvas */}
-      <div className="glass-card relative" style={{ height: "calc(100vh - 280px)" }}>
+      <div className="glass-card relative overflow-hidden" style={{ height: "calc(100vh - 300px)", minHeight: 480 }}>
+        {loading && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/30"><div className="text-sm text-gray-500">Loading real graph data…</div></div>}
+        {error && <div className="absolute inset-x-4 top-4 z-20 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs text-red-300">{error}</div>}
+        {!loading && !error && !data?.nodes.length && <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">Run a real repository scan to populate the graph.</div>}
         <canvas
           ref={canvasRef}
-          onMouseMove={handleMouseMove}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onMouseMoveCapture={handleDrag}
-          className="w-full h-full"
+          className="w-full h-full touch-none"
+          onPointerMove={pointerNode}
+          onPointerLeave={() => setHovered(null)}
+          onPointerDown={(e) => { dragRef.current = { active: true, x: e.clientX, y: e.clientY }; }}
+          onPointerUp={() => { dragRef.current.active = false; }}
+          onPointerCancel={() => { dragRef.current.active = false; }}
         />
-
-        {/* Hover Tooltip */}
-        {hoveredNode && (
-          <div className="absolute top-4 right-4 glass-card p-4 min-w-[200px] animate-fade-in">
-            <div className="flex items-center gap-2 mb-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: hoveredNode.color }}
-              />
-              <span className="text-xs font-semibold text-gray-300">
-                {hoveredNode.type}
-              </span>
-            </div>
-            <p className="text-sm text-gray-200 font-mono">
-              {hoveredNode.label}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Connections:{" "}
-              {graphData.edges.filter(
-                (e) =>
-                  e.source === hoveredNode.id || e.target === hoveredNode.id
-              ).length}
-            </p>
+        {hovered && (
+          <div className="absolute right-4 top-4 glass-card p-4 min-w-[220px] pointer-events-none">
+            <div className="flex items-center gap-2 mb-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: colorFor(hovered.type) }} /><span className="text-[10px] uppercase text-gray-500">{hovered.type}</span></div>
+            <p className="text-sm text-gray-100 font-mono break-words">{hovered.label}</p>
+            {hovered.properties?.severity && <p className="text-xs text-red-300 mt-2">Severity: {String(hovered.properties.severity)}</p>}
+            {hovered.properties?.file_path && <p className="text-xs text-gray-500 mt-1 break-all">{String(hovered.properties.file_path)}</p>}
           </div>
         )}
-
-        {/* Scan Line */}
-        <div className="scan-line-overlay rounded-xl" />
+        <div className="absolute bottom-3 left-3 text-[10px] text-gray-600">Updated {lastUpdated ? lastUpdated.toLocaleTimeString() : "—"} · refreshes automatically</div>
       </div>
     </motion.div>
   );
