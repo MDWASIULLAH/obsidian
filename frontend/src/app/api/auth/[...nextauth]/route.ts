@@ -51,7 +51,6 @@ const providers = [
 const handler = NextAuth({
   providers,
   secret: authSecret,
-  trustHost: true,
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
@@ -80,9 +79,8 @@ const handler = NextAuth({
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Always land authenticated users on the dashboard overview.
-      // This prevents the GitHub App setup/onboarding URL from becoming the
-      // post-login destination.
+      // Authenticated users should land on the dashboard overview only when
+      // the callback is the normal login/root flow or the removed setup route.
       if (url.startsWith(baseUrl)) {
         const pathname = new URL(url).pathname;
         if (
@@ -92,9 +90,10 @@ const handler = NextAuth({
         ) {
           return `${baseUrl}/dashboard`;
         }
+        return url;
       }
 
-      // Preserve safe internal redirects, but never return to setup.
+      // Preserve valid relative internal callback URLs.
       if (url.startsWith("/")) {
         if (url === "/dashboard/setup" || url.startsWith("/dashboard/setup/")) {
           return `${baseUrl}/dashboard`;
@@ -102,6 +101,7 @@ const handler = NextAuth({
         return `${baseUrl}${url}`;
       }
 
+      // External/unsafe callback URLs fall back to the dashboard.
       return `${baseUrl}/dashboard`;
     },
   },
