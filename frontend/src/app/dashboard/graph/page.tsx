@@ -9,7 +9,7 @@ type Edge = { source: string; target: string; relationship: string };
 type Graph = { repository_id: string; repository_name: string; nodes: Node[]; edges: Edge[]; meta: { generated_at: string; active_scans: number; finding_count: number; scan_count: number } };
 type VNode = Node & { x: number; y: number; z: number; phase: number };
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = (process.env.NEXT_PUBLIC_API_URL || "https://obsidian-backend-gute.onrender.com").replace(/\/$/, "");
 const COLORS: Record<string, string> = { Repository: "#00e5ff", File: "#3b82f6", Dependency: "#ff7900", Vulnerability: "#ff3366", Threat: "#ec4899", Agent: "#00ff88", Fix: "#10b981", Scan: "#8b5cf6" };
 function color(type: string) { return COLORS[type] || "#94a3b8"; }
 function hash(value: string) { let h = 0; for (let i = 0; i < value.length; i++) h = ((h << 5) - h + value.charCodeAt(i)) | 0; return Math.abs(h); }
@@ -55,10 +55,10 @@ export default function GraphPage() {
   }, [repoId]);
 
   useEffect(() => {
-    fetch(`${API}/api/v1/repositories`, { cache: "no-store" }).then(r => r.json()).then(items => {
+    fetch(`${API}/api/v1/repositories`, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(`Repository API returned ${r.status}`); return r.json(); }).then(items => {
       const list = (Array.isArray(items) ? items : []).map((x: any) => ({ id: x.id, full_name: x.full_name }));
       setRepos(list); if (!repoId && list[0]) setRepoId(list[0].id);
-    }).catch(e => setError(e?.message || "Unable to load repositories"));
+    }).catch(e => { setLoading(false); setError(e?.message || "Unable to load repositories"); });
   }, [repoId]);
 
   useEffect(() => {
@@ -115,7 +115,7 @@ export default function GraphPage() {
         {loading && <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none"><span className="text-sm text-gray-500">Loading repository intelligence…</span></div>}
         {error && <div className="absolute top-4 left-4 right-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-300">{error}</div>}
         {graph && !graph.nodes.length && !loading && <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500 pointer-events-none">Run a real scan to build the repository graph.</div>}
-        {hovered && <div className="absolute right-4 top-4 w-[250px] glass-card p-4 pointer-events-none"><div className="flex items-center gap-2 mb-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: color(hovered.type), boxShadow: `0 0 8px ${color(hovered.type)}` }} /><span className="text-[10px] uppercase text-gray-500">{hovered.type}</span></div><div className="text-sm text-gray-100 break-words">{hovered.label}</div>{hovered.properties?.severity && <div className="text-xs text-red-300 mt-2">Severity: {String(hovered.properties.severity)}</div>}{hovered.properties?.file_path && <div className="text-[11px] text-gray-500 mt-1 break-all">{String(hovered.properties.file_path)}</div>}{hovered.properties?.recommendation && <div className="text-[11px] text-emerald-300 mt-2">Fix: {String(hovered.properties.recommendation)}</div>}</div>}
+        {hovered && <div className="absolute right-4 top-4 w-[250px] glass-card p-4 pointer-events-none"><div className="flex items-center gap-2 mb-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: color(hovered.type), boxShadow: `0 0 8px ${color(hovered.type)}` }} /><span className="text-[10px] uppercase text-gray-500">{hovered.type}</span></div><div className="text-sm text-gray-100 break-words">{hovered.label}</div>{hovered.properties?.severity != null && <div className="text-xs text-red-300 mt-2">Severity: {String(hovered.properties.severity)}</div>}{hovered.properties?.file_path != null && <div className="text-[11px] text-gray-500 mt-1 break-all">{String(hovered.properties.file_path)}</div>}{hovered.properties?.recommendation != null && <div className="text-[11px] text-emerald-300 mt-2">Fix: {String(hovered.properties.recommendation)}</div>}</div>}
         <div className="absolute bottom-3 left-3 text-[10px] text-gray-600">Real data · graph rotates in 3D · relationships animate · API refreshes automatically</div>
       </div>
     </motion.div>
