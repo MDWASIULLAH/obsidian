@@ -53,19 +53,12 @@ export default function DashboardLayout({
     },
   });
 
-  // Redirect logic to setup page removed as per user request
-
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-surface-950 flex items-center justify-center">
         <div className="w-8 h-8 rounded-full bg-primary-500 animate-ping" />
       </div>
     );
-  }
-
-  // If on setup page, just render children without sidebar
-  if (pathname === "/dashboard/setup") {
-    return <div className="h-screen bg-surface-950 overflow-auto">{children}</div>;
   }
 
   return (

@@ -79,6 +79,31 @@ const handler = NextAuth({
       (session as any).accessToken = (token as any).accessToken;
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Always land authenticated users on the dashboard overview.
+      // This prevents the GitHub App setup/onboarding URL from becoming the
+      // post-login destination.
+      if (url.startsWith(baseUrl)) {
+        const pathname = new URL(url).pathname;
+        if (
+          pathname === "/dashboard/setup" ||
+          pathname === "/" ||
+          pathname.startsWith("/api/auth")
+        ) {
+          return `${baseUrl}/dashboard`;
+        }
+      }
+
+      // Preserve safe internal redirects, but never return to setup.
+      if (url.startsWith("/")) {
+        if (url === "/dashboard/setup" || url.startsWith("/dashboard/setup/")) {
+          return `${baseUrl}/dashboard`;
+        }
+        return `${baseUrl}${url}`;
+      }
+
+      return `${baseUrl}/dashboard`;
+    },
   },
   pages: {
     signIn: "/",
