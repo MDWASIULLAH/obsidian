@@ -103,6 +103,7 @@ def create_app() -> FastAPI:
 
     from app.api.auth import router as auth_router
     from app.api.onboarding import router as onboarding_router
+    from app.api.dashboard_live import router as dashboard_live_router
     from app.api.webhook_override import router as webhook_override_router
     from app.api.scan_override import router as scan_override_router
     from app.api.router import api_router
@@ -110,6 +111,10 @@ def create_app() -> FastAPI:
 
     application.include_router(auth_router, prefix="/api/v1")
     application.include_router(onboarding_router, prefix="/api/v1")
+
+    # Dashboard must precede the legacy router so the Vercel overview receives
+    # the live aggregation, first-run scan bootstrap and progress information.
+    application.include_router(dashboard_live_router, prefix="/api/v1")
 
     # Real push/PR webhooks and POST /scans must be registered before the
     # legacy Celery-only router. This keeps automatic scans working even when
