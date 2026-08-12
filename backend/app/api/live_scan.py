@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from sqlalchemy import desc, select, update, func
+from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import async_session_factory, get_db
@@ -114,52 +114,67 @@ async def _run_pipeline_in_process(scan_id: str, state: dict[str, Any]) -> None:
             await session.commit()
 
 
+async def _prepare_and_run(scan_id: str, repository_id: str, ref: str, branch: str) -> None:
+    """Fetch sources and run the pipeline after the Scan row already exists."""
+    try:
+        async with async_session_factory() as session:
+            await session.execute(update(Scan).where(Scan.id == scan_id).values(status=ScanStatus.INDEXING.value, current_agent="repository-indexer"))
+            await session.commit()
+
+        async with async_session_factory() as session:
+            repo_result = await session.execute(select(Repository).where(Repository.id == repository_id))
+            repo = repo_result.scalar_one_or_none()
+            if not repo:
+                raise RuntimeError("Repository not found while preparing scan")
+            changed_files, file_contents = await _load_repository_sources(repo, ref)
+
+        if not file_contents:
+            raise RuntimeError("GitHub returned no scannable source files")
+
+        source_blob = "\n\n".join(f"===== FILE: {p} =====\n{c[:20_000]}" for p, c in file_contents.items())
+        state: dict[str, Any] = {
+            "repository_id": repository_id,
+            "repository_full_name": repo.full_name,
+            "commit_sha": ref,
+            "branch": branch,
+            "scan_id": scan_id,
+            "trigger": "manual",
+            "changed_files": changed_files,
+            "file_contents": file_contents,
+            "diff_content": source_blob[:120_000],
+            "code_diff": source_blob[:120_000],
+            "all_findings": scan_repository_files(file_contents),
+        }
+
+        from app.config import get_settings
+        from app.tasks.celery_app import run_pipeline
+        broker = get_settings().celery_broker_url
+        if broker and "localhost" not in broker and "127.0.0.1" not in broker:
+            run_pipeline.delay(scan_id, state)
+        else:
+            await _run_pipeline_in_process(scan_id, state)
+    except Exception as exc:
+        async with async_session_factory() as session:
+            await session.execute(update(Scan).where(Scan.id == scan_id).values(status=ScanStatus.FAILED.value, current_agent=None, error_message=str(exc)[:2000]))
+            await session.commit()
+
+
 @router.post("/scans/real", response_model=ScanResponse)
 async def trigger_real_scan(data: ScanCreate, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)) -> ScanResponse:
+    """Create the scan immediately; GitHub indexing happens in the background."""
     result = await db.execute(select(Repository).where(Repository.id == data.repository_id))
     repo = result.scalar_one_or_none()
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
 
     ref = data.commit_sha if data.commit_sha and data.commit_sha != "HEAD" else repo.default_branch
-    try:
-        changed_files, file_contents = await _load_repository_sources(repo, ref)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Unable to read repository from GitHub: {exc}") from exc
-    if not file_contents:
-        raise HTTPException(status_code=502, detail="GitHub returned no scannable source files")
-
-    scan = Scan(repository_id=repo.id, commit_sha=ref, branch=data.branch or repo.default_branch, trigger=ScanTrigger.MANUAL, status=ScanStatus.QUEUED)
+    branch = data.branch or repo.default_branch
+    scan = Scan(repository_id=repo.id, commit_sha=ref, branch=branch, trigger=ScanTrigger.MANUAL, status=ScanStatus.QUEUED)
     db.add(scan)
     await db.flush()
     await db.commit()
 
-    source_blob = "\n\n".join(f"===== FILE: {p} =====\n{c[:20_000]}" for p, c in file_contents.items())
-    state: dict[str, Any] = {
-        "repository_id": repo.id,
-        "repository_full_name": repo.full_name,
-        "commit_sha": ref,
-        "branch": data.branch or repo.default_branch,
-        "scan_id": scan.id,
-        "trigger": "manual",
-        "changed_files": changed_files,
-        "file_contents": file_contents,
-        "diff_content": source_blob[:120_000],
-        "code_diff": source_blob[:120_000],
-        "all_findings": scan_repository_files(file_contents),
-    }
-
-    try:
-        from app.config import get_settings
-        from app.tasks.celery_app import run_pipeline
-        broker = get_settings().celery_broker_url
-        if broker and "localhost" not in broker and "127.0.0.1" not in broker:
-            run_pipeline.delay(scan.id, state)
-        else:
-            background_tasks.add_task(_run_pipeline_in_process, scan.id, state)
-    except Exception:
-        background_tasks.add_task(_run_pipeline_in_process, scan.id, state)
-
+    background_tasks.add_task(_prepare_and_run, str(scan.id), str(repo.id), ref, branch)
     return ScanResponse.model_validate(scan)
 
 
@@ -205,58 +220,35 @@ async def live_graph(repo_id: str, db: AsyncSession = Depends(get_db)) -> dict[s
 
     for finding in findings:
         fid = f"finding:{finding.id}"
-        add(fid, finding.title or "Security finding", "Vulnerability", {
-            "severity": finding.severity,
-            "confidence": finding.confidence,
-            "file_path": finding.file_path,
-            "cwe_id": finding.cwe_id,
-            "cve_id": finding.cve_id,
-            "recommendation": finding.recommendation,
-        })
+        add(fid, finding.title or "Security finding", "Vulnerability", {"severity": finding.severity, "confidence": finding.confidence, "file_path": finding.file_path, "cwe_id": finding.cwe_id, "cve_id": finding.cve_id, "recommendation": finding.recommendation})
         edges.extend([
             {"source": repo_node, "target": fid, "relationship": "HAS_FINDING"},
             {"source": f"scan:{finding.scan_id}", "target": fid, "relationship": "DISCOVERED"},
         ])
-
         threat_label = finding.mitre_technique or finding.owasp_category or finding.cwe_id or finding.category or "Security threat"
         tid = threat_nodes.setdefault(str(threat_label), _node_id("threat", str(threat_label)))
         add(tid, str(threat_label), "Threat", {"severity": finding.severity})
         edges.append({"source": fid, "target": tid, "relationship": "MAPS_TO_THREAT"})
-
         if finding.file_path:
             file_key = file_nodes.setdefault(finding.file_path, _node_id("file", finding.file_path))
             add(file_key, finding.file_path, "File", {"path": finding.file_path})
             edges.append({"source": repo_node, "target": file_key, "relationship": "CONTAINS"})
             edges.append({"source": file_key, "target": fid, "relationship": "HAS_VULNERABILITY"})
-
         if finding.agent_name:
             agent_key = agent_nodes.setdefault(finding.agent_name, _node_id("agent", finding.agent_name))
             add(agent_key, finding.agent_name, "Agent")
             edges.append({"source": agent_key, "target": fid, "relationship": "DISCOVERED"})
-
         if finding.recommendation:
             fix_key = _node_id("fix", finding.recommendation)
             add(fix_key, finding.recommendation[:80], "Fix", {"recommendation": finding.recommendation})
             edges.append({"source": fid, "target": fix_key, "relationship": "REMEDIATED_BY"})
 
-    active_values = {
-        ScanStatus.QUEUED.value,
-        ScanStatus.INDEXING.value,
-        ScanStatus.SCANNING.value,
-        ScanStatus.PATCHING.value,
-        ScanStatus.TESTING.value,
-        ScanStatus.REVIEWING.value,
-    }
+    active_values = {ScanStatus.QUEUED.value, ScanStatus.INDEXING.value, ScanStatus.SCANNING.value, ScanStatus.PATCHING.value, ScanStatus.TESTING.value, ScanStatus.REVIEWING.value}
     active = [s for s in scans if getattr(s.status, "value", str(s.status)) in active_values]
     return {
         "repository_id": str(repo.id),
         "repository_name": repo.full_name,
         "nodes": nodes,
         "edges": edges,
-        "meta": {
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "active_scans": len(active),
-            "finding_count": len(findings),
-            "scan_count": len(scans),
-        },
+        "meta": {"generated_at": datetime.now(timezone.utc).isoformat(), "active_scans": len(active), "finding_count": len(findings), "scan_count": len(scans)},
     }
