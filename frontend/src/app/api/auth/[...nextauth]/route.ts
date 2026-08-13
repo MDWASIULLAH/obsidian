@@ -5,6 +5,11 @@ const API_BASE = (
   process.env.NEXT_PUBLIC_API_URL || "https://obsidian-backend-gute.onrender.com"
 ).replace(/\/$/, "");
 
+const githubClientId = process.env.AUTH_GITHUB_ID || process.env.GITHUB_ID || "";
+const githubClientSecret =
+  process.env.AUTH_GITHUB_SECRET || process.env.GITHUB_SECRET || "";
+const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "";
+
 async function syncBackendUser(account: any, token: any) {
   if (!account?.provider || !account?.providerAccountId) return null;
 
@@ -36,11 +41,6 @@ async function syncBackendUser(account: any, token: any) {
   return response.json();
 }
 
-const githubClientId = process.env.AUTH_GITHUB_ID || process.env.GITHUB_ID || "";
-const githubClientSecret =
-  process.env.AUTH_GITHUB_SECRET || process.env.GITHUB_SECRET || "";
-const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "";
-
 const providers = [
   GithubProvider({
     clientId: githubClientId,
@@ -55,12 +55,18 @@ const handler = NextAuth({
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
-        if (account.access_token) (token as any).accessToken = account.access_token;
+        // Persist the OAuth access token in the encrypted NextAuth JWT so
+        // server-side GitHub routes can call GitHub on behalf of the user.
+        if (account.access_token) {
+          (token as any).accessToken = account.access_token;
+        }
+
         try {
           const synced = await syncBackendUser(account, token);
           if (synced?.user_id) (token as any).backendUserId = synced.user_id;
           (token as any).provider = account.provider;
         } catch (error) {
+          // Backend sync must not invalidate a successful GitHub login.
           console.error("OBSIDIAN backend auth sync failed (non-blocking)", error);
           (token as any).provider = account.provider;
         }
