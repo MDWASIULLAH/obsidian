@@ -121,13 +121,14 @@ function SystemStatus({ backendOnline, githubOnline, scanState }: { backendOnlin
   return <motion.div className="glass-card p-6"><div className="flex items-center justify-between mb-4"><h3 className="text-xs text-gray-500 uppercase tracking-wider">System Status</h3><Server className="w-4 h-4 text-cyan-400" /></div><div className="space-y-2">{items.map(([label, ok, detail]) => <div key={String(label)} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02]">{ok ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <XCircle className="w-4 h-4 text-red-400" />}<div className="flex-1 min-w-0"><p className="text-xs text-gray-300">{label}</p><p className="text-[10px] text-gray-600 capitalize">{detail}</p></div><span className={`text-[10px] uppercase ${ok ? "text-emerald-400" : "text-red-400"}`}>{ok ? "Online" : "Offline"}</span></div>)}</div></motion.div>;
 }
 
-function GitHubRepositories({ repos }: { repos: GitHubRepo[] }) {
-  return <motion.div className="glass-card p-6"><div className="flex items-center justify-between mb-4"><div><h3 className="text-xs text-gray-500 uppercase tracking-wider">GitHub Repositories</h3><p className="text-[11px] text-gray-600 mt-1">Repositories available to OBSIDIAN</p></div><a href="/dashboard/repositories" className="text-xs text-cyan-400 flex items-center gap-1">Manage <ChevronRight className="w-3 h-3" /></a></div>{repos.length === 0 ? <div className="py-8 text-center border border-white/5 rounded-lg"><GitBranch className="w-7 h-7 text-gray-600 mx-auto mb-2" /><p className="text-sm text-gray-400">No repositories loaded</p></div> : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">{repos.slice(0, 9).map((repo) => <a key={repo.id} href={repo.html_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/5"><GitBranch className="w-4 h-4 text-gray-500 shrink-0" /><div className="min-w-0 flex-1"><p className="text-xs font-medium text-gray-200 truncate">{repo.full_name}</p><p className="text-[10px] text-gray-600 truncate">{repo.language || "Unknown language"}</p></div>{repo.private ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <ExternalLink className="w-3.5 h-3.5 text-gray-600" />}</a>)}</div>}</motion.div>;
+function GitHubRepositories({ repos, error, onRetry }: { repos: GitHubRepo[]; error: string | null; onRetry: () => void }) {
+  return <motion.div className="glass-card p-6"><div className="flex items-center justify-between mb-4"><div><h3 className="text-xs text-gray-500 uppercase tracking-wider">GitHub Repositories</h3><p className="text-[11px] text-gray-600 mt-1">Live repositories available to OBSIDIAN</p></div><a href="/dashboard/repositories" className="text-xs text-cyan-400 flex items-center gap-1">Manage <ChevronRight className="w-3 h-3" /></a></div>{repos.length === 0 ? <div className="py-8 text-center border border-white/5 rounded-lg"><GitBranch className="w-7 h-7 text-gray-600 mx-auto mb-2" /><p className="text-sm text-gray-400">{error ? "GitHub access needs attention" : "No repositories found"}</p><p className="text-xs text-gray-600 mt-1">{error === "AUTH_REQUIRED" || error === "GITHUB_TOKEN_INVALID" ? "Sign in again with GitHub to restore repository access." : error ? "GitHub could not be reached. Try again." : "Your GitHub account currently has no accessible repositories."}</p>{error && <button onClick={onRetry} className="mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-xs text-gray-300 hover:bg-white/10"><RefreshCw className="w-3.5 h-3.5" /> Retry GitHub</button>}</div> : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">{repos.slice(0, 9).map((repo) => <a key={repo.id} href={repo.html_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/5"><GitBranch className="w-4 h-4 text-gray-500 shrink-0" /><div className="min-w-0 flex-1"><p className="text-xs font-medium text-gray-200 truncate">{repo.full_name}</p><p className="text-[10px] text-gray-600 truncate">{repo.language || "Unknown language"}</p></div>{repo.private ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <ExternalLink className="w-3.5 h-3.5 text-gray-600" />}</a>)}</div>}</motion.div>;
 }
 
 export default function DashboardPage() {
   const [data, setData] = useState<LiveDashboard | null>(null);
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [repoError, setRepoError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [backendOnline, setBackendOnline] = useState(false);
@@ -153,12 +154,21 @@ export default function DashboardPage() {
   const loadRepos = useCallback(async () => {
     try {
       const response = await fetch("/api/github/repos", { cache: "no-store" });
-      if (!response.ok) throw new Error(`GitHub returned ${response.status}`);
-      const json = await response.json();
-      setRepos(Array.isArray(json.repos) ? json.repos : []);
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setRepos([]);
+        setRepoError(typeof json.error === "string" ? json.error : `HTTP_${response.status}`);
+        setGithubOnline(false);
+        return;
+      }
+      const nextRepos = Array.isArray(json.repos) ? json.repos : [];
+      setRepos(nextRepos);
+      setRepoError(null);
       setGithubOnline(true);
     } catch (error) {
       console.error("GitHub repositories unavailable:", error);
+      setRepos([]);
+      setRepoError("NETWORK_ERROR");
       setGithubOnline(false);
     }
   }, []);
@@ -177,6 +187,10 @@ export default function DashboardPage() {
     severity_distribution: { critical: 0, high: 0, medium: 0, low: 0, info: 0 }, scan_progress: 0, scan_state: "idle",
   }, [data, repos.length]);
 
+  // GitHub is the source of truth for repository visibility. The backend may
+  // legitimately report zero before the first repository is scanned.
+  const repositoryCount = repos.length > 0 ? repos.length : displayData.total_repositories;
+
   if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><div className="text-center"><Shield className="w-10 h-10 text-cyan-400 animate-pulse mx-auto mb-4" /><p className="text-sm text-gray-400">Loading live security overview…</p></div></div>;
 
   const state = displayData.scan_state || "idle";
@@ -186,13 +200,13 @@ export default function DashboardPage() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 w-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div><h1 className="text-xl sm:text-2xl font-bold text-gray-100">Security Overview</h1><p className="text-xs sm:text-sm text-gray-500 mt-1">Live security posture, repository activity and scan pipeline status</p></div>
-        <div className="flex items-center gap-3"><span className="text-[10px] text-gray-600">{lastRefresh ? `Updated ${lastRefresh.toLocaleTimeString()}` : "Live"}</span><button onClick={() => loadDashboard(true)} disabled={refreshing} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-50"><RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh</button></div>
+        <div className="flex items-center gap-3"><span className="text-[10px] text-gray-600">{lastRefresh ? `Updated ${lastRefresh.toLocaleTimeString()}` : "Live"}</span><button onClick={() => { loadDashboard(true); loadRepos(); }} disabled={refreshing} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-xs text-gray-300 hover:bg-white/10 disabled:opacity-50"><RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh</button></div>
       </div>
 
       {active && <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 flex items-center gap-3"><Activity className="w-4 h-4 text-cyan-400 animate-pulse" /><div className="flex-1"><p className="text-xs text-cyan-200">Security scan in progress</p><p className="text-[10px] text-gray-500 mt-0.5">{state} · {displayData.scan_progress || 0}% pipeline progress · overview updates automatically</p></div><a href="/dashboard/scans" className="text-xs text-cyan-400">Open scans</a></div>}
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-        <StatCard icon={GitBranch} label="Repositories" value={displayData.total_repositories} detail={githubOnline ? "GitHub connected" : "GitHub unavailable"} />
+        <StatCard icon={GitBranch} label="Repositories" value={repositoryCount} detail={githubOnline ? `${repos.length} from GitHub` : "GitHub unavailable"} />
         <StatCard icon={AlertTriangle} label="Total Findings" value={displayData.total_findings} detail={`${displayData.critical_findings} critical`} tone="red" />
         <StatCard icon={Wrench} label="Patches Generated" value={displayData.patches_generated} detail={`${displayData.tests_generated} tests generated`} tone="green" />
         <StatCard icon={Bot} label="Active Scans" value={displayData.active_scans} detail={active ? `Live: ${state}` : "No active scan"} tone="violet" />
@@ -209,7 +223,7 @@ export default function DashboardPage() {
         <SystemStatus backendOnline={backendOnline} githubOnline={githubOnline} scanState={state} />
       </div>
 
-      <GitHubRepositories repos={repos} />
+      <GitHubRepositories repos={repos} error={repoError} onRetry={loadRepos} />
 
       <div className="glass-card p-6 border-cyan-500/10"><div className="flex items-center justify-between mb-4"><div><h3 className="text-xs text-gray-500 uppercase tracking-wider flex items-center gap-2"><Activity className="w-4 h-4 text-cyan-400" /> Live Scan Telemetry</h3><p className="text-[11px] text-gray-600 mt-1">This overview polls the real backend every 3 seconds.</p></div><span className={`text-[10px] uppercase ${backendOnline ? "text-emerald-400" : "text-red-400"}`}>{backendOnline ? "Connected" : "Offline"}</span></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><div className="rounded-lg border border-white/5 bg-white/[0.02] p-3"><p className="text-[10px] text-gray-600 uppercase">Pipeline</p><p className="text-sm text-gray-200 mt-1 capitalize">{state}</p></div><div className="rounded-lg border border-white/5 bg-white/[0.02] p-3"><p className="text-[10px] text-gray-600 uppercase">Progress</p><p className="text-sm text-cyan-300 mt-1">{displayData.scan_progress || 0}%</p></div><div className="rounded-lg border border-white/5 bg-white/[0.02] p-3"><p className="text-[10px] text-gray-600 uppercase">Findings</p><p className="text-sm text-gray-200 mt-1">{displayData.total_findings}</p></div><div className="rounded-lg border border-white/5 bg-white/[0.02] p-3"><p className="text-[10px] text-gray-600 uppercase">Backend</p><p className="text-sm text-emerald-300 mt-1">{backendOnline ? "Online" : "Offline"}</p></div></div></div>
     </motion.div>
