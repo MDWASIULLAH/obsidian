@@ -2,16 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  GitBranch,
-  Search,
-  Star,
-  GitFork,
-  Lock,
-  Globe,
-  RefreshCw,
-} from "lucide-react";
+import { GitBranch, Search, Star, GitFork, Lock, Globe, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { api, type Repository } from "@/lib/api";
 
 interface GitHubRepo {
   id: string;
@@ -71,12 +64,37 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
+function fromBackendRepo(repo: Repository): GitHubRepo {
+  return {
+    id: String(repo.id),
+    github_id: Number(repo.github_id || 0),
+    full_name: repo.full_name,
+    name: repo.name,
+    owner: repo.owner,
+    default_branch: repo.default_branch || "main",
+    description: repo.description,
+    language: repo.language,
+    is_active: repo.is_active,
+    security_score: Number(repo.security_score || 0),
+    total_scans: Number(repo.total_scans || 0),
+    total_findings: Number(repo.total_findings || 0),
+    total_patches: Number(repo.total_patches || 0),
+    private: false,
+    stargazers_count: 0,
+    forks_count: 0,
+    updated_at: repo.updated_at,
+    created_at: repo.created_at,
+    html_url: `https://github.com/${repo.full_name}`,
+  };
+}
+
 export default function RepositoriesPage() {
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "public" | "private">("all");
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<"github" | "backend" | null>(null);
 
   useEffect(() => {
     loadRepos();
@@ -84,19 +102,53 @@ export default function RepositoriesPage() {
 
   async function loadRepos() {
     setLoading(true);
+    setError(null);
+
     try {
-      const res = await fetch("/api/github/repos", { cache: "no-store" });
+      const res = await fetch(`/api/github/repos?t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setRepos([]);
-        setError(typeof data.error === "string" ? data.error : `HTTP_${res.status}`);
+      const githubRepos = Array.isArray(data.repos) ? data.repos : [];
+
+      if (res.ok && githubRepos.length > 0) {
+        setRepos(githubRepos);
+        setSource("github");
         return;
       }
-      setRepos(Array.isArray(data.repos) ? data.repos : []);
-      setError(null);
-    } catch (err) {
-      console.error("Failed to load repos:", err);
+
+      // Do not blank the dashboard just because GitHub OAuth is temporarily
+      // unavailable. Fall back to repositories already tracked by OBSIDIAN.
+      try {
+        const tracked = await api.listRepositories();
+        const fallback = Array.isArray(tracked) ? tracked.map(fromBackendRepo) : [];
+        if (fallback.length > 0) {
+          setRepos(fallback);
+          setSource("backend");
+          setError(null);
+          return;
+        }
+      } catch (fallbackError) {
+        console.error("Tracked repository fallback failed:", fallbackError);
+      }
+
       setRepos([]);
+      setSource(null);
+      setError(typeof data.error === "string" ? data.error : `HTTP_${res.status}`);
+    } catch (err) {
+      console.error("Failed to load GitHub repos:", err);
+      try {
+        const tracked = await api.listRepositories();
+        const fallback = Array.isArray(tracked) ? tracked.map(fromBackendRepo) : [];
+        if (fallback.length > 0) {
+          setRepos(fallback);
+          setSource("backend");
+          setError(null);
+          return;
+        }
+      } catch (fallbackError) {
+        console.error("Tracked repository fallback failed:", fallbackError);
+      }
+      setRepos([]);
+      setSource(null);
       setError("NETWORK_ERROR");
     } finally {
       setLoading(false);
@@ -116,19 +168,19 @@ export default function RepositoriesPage() {
     return <div className="flex flex-col items-center justify-center h-[60vh] gap-4"><RefreshCw className="w-8 h-8 text-primary-500 animate-spin" /><p className="text-sm text-gray-400">Loading your GitHub repositories...</p></div>;
   }
 
-  const authError = error === "AUTH_REQUIRED" || error === "GITHUB_TOKEN_INVALID";
-
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-100">Your Repositories</h1>
-          <p className="text-sm text-gray-500 mt-1">{repos.length} repositories from your GitHub account</p>
+          <p className="text-sm text-gray-500 mt-1">{repos.length} repositories {source === "backend" ? "tracked by OBSIDIAN" : "from your GitHub account"}</p>
         </div>
         <button onClick={loadRepos} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-surface-800 border border-surface-700 text-gray-300 rounded-lg text-sm font-medium hover:bg-surface-700 transition-all disabled:opacity-50">
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
       </motion.div>
+
+      {source === "backend" && <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">GitHub is temporarily unavailable, so OBSIDIAN is showing your previously tracked repositories instead of an empty screen.</div>}
 
       <motion.div variants={itemVariants} className="flex items-center gap-4">
         <div className="relative flex-1">
@@ -168,14 +220,9 @@ export default function RepositoriesPage() {
       {filteredRepos.length === 0 && (
         <div className="text-center py-20">
           <GitBranch className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400 text-lg font-medium">
-            {authError ? "GitHub session needs refresh" : error ? "GitHub repositories are unavailable" : searchQuery ? "No repositories found" : "No repositories found"}
-          </p>
-          <p className="text-xs text-gray-500 mt-1 mb-6">
-            {authError ? "Your GitHub login is valid, but repository access is not present in the current session." : error ? "Check the GitHub connection and try again." : searchQuery ? "Try a different search query" : "No repositories are available to this GitHub account."}
-          </p>
-          {authError && <button onClick={() => { window.location.href = "/api/auth/signout?callbackUrl=/"; }} className="px-6 py-3 bg-primary-500 text-surface-950 rounded-lg font-semibold hover:bg-primary-400 transition-colors">Sign Out & Re-Login</button>}
-          {!authError && error && <button onClick={loadRepos} className="px-5 py-2.5 bg-surface-800 border border-surface-700 text-gray-300 rounded-lg text-sm font-medium hover:bg-surface-700">Retry</button>}
+          <p className="text-gray-400 text-lg font-medium">{error === "AUTH_REQUIRED" || error === "GITHUB_TOKEN_INVALID" ? "GitHub session needs refresh" : error ? "Repositories are unavailable" : searchQuery ? "No repositories found" : "No repositories found"}</p>
+          <p className="text-xs text-gray-500 mt-1 mb-6">{error === "AUTH_REQUIRED" || error === "GITHUB_TOKEN_INVALID" ? "Your GitHub login does not currently contain repository access." : error ? "Try Refresh again. OBSIDIAN will also use its tracked repository data when available." : searchQuery ? "Try a different search query" : "No repositories are currently available."}</p>
+          {error === "AUTH_REQUIRED" || error === "GITHUB_TOKEN_INVALID" ? <button onClick={() => { window.location.href = "/api/auth/signout?callbackUrl=/"; }} className="px-6 py-3 bg-primary-500 text-surface-950 rounded-lg font-semibold hover:bg-primary-400 transition-colors">Sign Out & Re-Login</button> : error && <button onClick={loadRepos} className="px-5 py-2.5 bg-surface-800 border border-surface-700 text-gray-300 rounded-lg text-sm font-medium hover:bg-surface-700">Retry</button>}
         </div>
       )}
     </motion.div>
